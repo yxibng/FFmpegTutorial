@@ -1,0 +1,403 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		35A4F7988DFD63034AD9DF82 /* libPods-MRStreamProber.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B2F039BA1C75706E654C1642 /* libPods-MRStreamProber.a */; };
+		DD1D61CF23D4504D0032BDA6 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = DD1D61CE23D4504D0032BDA6 /* AppDelegate.m */; };
+		DD1D61D223D4504D0032BDA6 /* SceneDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = DD1D61D123D4504D0032BDA6 /* SceneDelegate.m */; };
+		DD1D61D823D4504D0032BDA6 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = DD1D61D623D4504D0032BDA6 /* Main.storyboard */; };
+		DD1D61DA23D4504E0032BDA6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DD1D61D923D4504E0032BDA6 /* Assets.xcassets */; };
+		DD1D61DD23D4504E0032BDA6 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = DD1D61DB23D4504E0032BDA6 /* LaunchScreen.storyboard */; };
+		DD1D61E023D4504E0032BDA6 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = DD1D61DF23D4504E0032BDA6 /* main.m */; };
+		DD1D61EE23D455B60032BDA6 /* MRStreamProber.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD1D61EC23D455B50032BDA6 /* MRStreamProber.cpp */; };
+		DD1D61F023D45D2B0032BDA6 /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = DD1D61EF23D45D2B0032BDA6 /* ViewController.mm */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		5C33647D7059EB744FB1908C /* Pods-MRStreamProber.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MRStreamProber.release.xcconfig"; path = "Target Support Files/Pods-MRStreamProber/Pods-MRStreamProber.release.xcconfig"; sourceTree = "<group>"; };
+		B2F039BA1C75706E654C1642 /* libPods-MRStreamProber.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MRStreamProber.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD1D61CA23D4504D0032BDA6 /* MRStreamProber.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MRStreamProber.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD1D61CD23D4504D0032BDA6 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		DD1D61CE23D4504D0032BDA6 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		DD1D61D023D4504D0032BDA6 /* SceneDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SceneDelegate.h; sourceTree = "<group>"; };
+		DD1D61D123D4504D0032BDA6 /* SceneDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SceneDelegate.m; sourceTree = "<group>"; };
+		DD1D61D323D4504D0032BDA6 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
+		DD1D61D723D4504D0032BDA6 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		DD1D61D923D4504E0032BDA6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		DD1D61DC23D4504E0032BDA6 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		DD1D61DE23D4504E0032BDA6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		DD1D61DF23D4504E0032BDA6 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		DD1D61EC23D455B50032BDA6 /* MRStreamProber.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MRStreamProber.cpp; path = ../../../Source/MRStreamProber.cpp; sourceTree = "<group>"; };
+		DD1D61ED23D455B50032BDA6 /* MRStreamProber.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = MRStreamProber.hpp; path = ../../../Source/MRStreamProber.hpp; sourceTree = "<group>"; };
+		DD1D61EF23D45D2B0032BDA6 /* ViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ViewController.mm; sourceTree = "<group>"; };
+		F984151CF2CB7E1085F309FF /* Pods-MRStreamProber.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MRStreamProber.debug.xcconfig"; path = "Target Support Files/Pods-MRStreamProber/Pods-MRStreamProber.debug.xcconfig"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DD1D61C723D4504D0032BDA6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				35A4F7988DFD63034AD9DF82 /* libPods-MRStreamProber.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		011371C3532D3C725F8A0D88 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				B2F039BA1C75706E654C1642 /* libPods-MRStreamProber.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		42380516D2D55746D3DD19BD /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				F984151CF2CB7E1085F309FF /* Pods-MRStreamProber.debug.xcconfig */,
+				5C33647D7059EB744FB1908C /* Pods-MRStreamProber.release.xcconfig */,
+			);
+			name = Pods;
+			path = ../Pods;
+			sourceTree = "<group>";
+		};
+		DD1D61C123D4504D0032BDA6 = {
+			isa = PBXGroup;
+			children = (
+				DD1D61CC23D4504D0032BDA6 /* MRStreamProber */,
+				DD1D61CB23D4504D0032BDA6 /* Products */,
+				42380516D2D55746D3DD19BD /* Pods */,
+				011371C3532D3C725F8A0D88 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		DD1D61CB23D4504D0032BDA6 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				DD1D61CA23D4504D0032BDA6 /* MRStreamProber.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DD1D61CC23D4504D0032BDA6 /* MRStreamProber */ = {
+			isa = PBXGroup;
+			children = (
+				DD1D61EC23D455B50032BDA6 /* MRStreamProber.cpp */,
+				DD1D61ED23D455B50032BDA6 /* MRStreamProber.hpp */,
+				DD1D61CD23D4504D0032BDA6 /* AppDelegate.h */,
+				DD1D61CE23D4504D0032BDA6 /* AppDelegate.m */,
+				DD1D61D023D4504D0032BDA6 /* SceneDelegate.h */,
+				DD1D61D123D4504D0032BDA6 /* SceneDelegate.m */,
+				DD1D61D323D4504D0032BDA6 /* ViewController.h */,
+				DD1D61EF23D45D2B0032BDA6 /* ViewController.mm */,
+				DD1D61D623D4504D0032BDA6 /* Main.storyboard */,
+				DD1D61D923D4504E0032BDA6 /* Assets.xcassets */,
+				DD1D61DB23D4504E0032BDA6 /* LaunchScreen.storyboard */,
+				DD1D61DE23D4504E0032BDA6 /* Info.plist */,
+				DD1D61DF23D4504E0032BDA6 /* main.m */,
+			);
+			path = MRStreamProber;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		DD1D61C923D4504D0032BDA6 /* MRStreamProber */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DD1D61E323D4504E0032BDA6 /* Build configuration list for PBXNativeTarget "MRStreamProber" */;
+			buildPhases = (
+				678B6E4A4B01BB0124D8611C /* [CP] Check Pods Manifest.lock */,
+				DD1D61C623D4504D0032BDA6 /* Sources */,
+				DD1D61C723D4504D0032BDA6 /* Frameworks */,
+				DD1D61C823D4504D0032BDA6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MRStreamProber;
+			productName = MRStreamProber;
+			productReference = DD1D61CA23D4504D0032BDA6 /* MRStreamProber.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		DD1D61C223D4504D0032BDA6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1130;
+				ORGANIZATIONNAME = "Awesome FFmpeg Study Demo";
+				TargetAttributes = {
+					DD1D61C923D4504D0032BDA6 = {
+						CreatedOnToolsVersion = 11.3;
+					};
+				};
+			};
+			buildConfigurationList = DD1D61C523D4504D0032BDA6 /* Build configuration list for PBXProject "MRStreamProber" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = DD1D61C123D4504D0032BDA6;
+			productRefGroup = DD1D61CB23D4504D0032BDA6 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DD1D61C923D4504D0032BDA6 /* MRStreamProber */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		DD1D61C823D4504D0032BDA6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DD1D61DD23D4504E0032BDA6 /* LaunchScreen.storyboard in Resources */,
+				DD1D61DA23D4504E0032BDA6 /* Assets.xcassets in Resources */,
+				DD1D61D823D4504D0032BDA6 /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		678B6E4A4B01BB0124D8611C /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-MRStreamProber-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		DD1D61C623D4504D0032BDA6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DD1D61EE23D455B60032BDA6 /* MRStreamProber.cpp in Sources */,
+				DD1D61CF23D4504D0032BDA6 /* AppDelegate.m in Sources */,
+				DD1D61F023D45D2B0032BDA6 /* ViewController.mm in Sources */,
+				DD1D61E023D4504E0032BDA6 /* main.m in Sources */,
+				DD1D61D223D4504D0032BDA6 /* SceneDelegate.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		DD1D61D623D4504D0032BDA6 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				DD1D61D723D4504D0032BDA6 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		DD1D61DB23D4504E0032BDA6 /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				DD1D61DC23D4504E0032BDA6 /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		DD1D61E123D4504E0032BDA6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.2;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		DD1D61E223D4504E0032BDA6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		DD1D61E423D4504E0032BDA6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = F984151CF2CB7E1085F309FF /* Pods-MRStreamProber.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = MRStreamProber/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cn.debugly.MRStreamProber;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DD1D61E523D4504E0032BDA6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5C33647D7059EB744FB1908C /* Pods-MRStreamProber.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = MRStreamProber/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cn.debugly.MRStreamProber;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		DD1D61C523D4504D0032BDA6 /* Build configuration list for PBXProject "MRStreamProber" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD1D61E123D4504E0032BDA6 /* Debug */,
+				DD1D61E223D4504E0032BDA6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DD1D61E323D4504E0032BDA6 /* Build configuration list for PBXNativeTarget "MRStreamProber" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD1D61E423D4504E0032BDA6 /* Debug */,
+				DD1D61E523D4504E0032BDA6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = DD1D61C223D4504D0032BDA6 /* Project object */;
+}
