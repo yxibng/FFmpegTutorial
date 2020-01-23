@@ -80,7 +80,7 @@ int MRStreamProber::probe(const char *url,const char **result){
                     //获取音频采样格式名称
                     const char * formatDesc = av_get_sample_fmt_name(format);
                     
-                    sprintf(str + strlen(str),"\n\nAudio\n%d Kbps，%.1f KHz， %d channels，%s，%s，duration:%lld",(int)(brate/1000.0),sample_rate/1000.0,channels,codecDesc,formatDesc,duration);
+                    sprintf(str + strlen(str),"\n\nAudio:\n%d Kbps，%.1f KHz， %d channels，%s，%s，duration:%lld",(int)(brate/1000.0),sample_rate/1000.0,channels,codecDesc,formatDesc,duration);
                 }
                     break;
                     ///视频流

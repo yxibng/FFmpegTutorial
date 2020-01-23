@@ -25,12 +25,10 @@
     const char *result = NULL;
     if (0 == prober.probe(url,&result)) {
         printf("%s",result);
-        //free(result); todo
+        free((void *)result);
         result = NULL;
     }
-    
     prober.destroy();
 }
-
 
 @end
