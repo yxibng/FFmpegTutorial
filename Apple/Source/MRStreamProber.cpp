@@ -56,7 +56,7 @@ int MRStreamProber::probe(const char *url,const char **result){
             }
             
             av_codec_set_pkt_timebase(codecCtx, stream->time_base);
-            
+            av_dump_format(formatCtx, i, url, 0);
             //AVCodecContext *codec = stream->codec;
             enum AVMediaType codec_type = codecCtx->codec_type;
             switch (codec_type) {
@@ -69,8 +69,12 @@ int MRStreamProber::probe(const char *url,const char **result){
                     int channels = codecCtx->channels;
                     //平均比特率
                     int64_t brate = codecCtx->bit_rate;
-                    //时长
-                    int64_t duration = stream->duration;
+                    //时长(s)
+                    int64_t duration = stream->duration * av_q2d(stream->time_base);
+                    int64_t duration2 = formatCtx->duration * av_q2d(AV_TIME_BASE_Q);
+                    
+                    printf("AVStream duration:%lld\n",duration);
+                    printf("AVFormatContext duration:%lld\n",duration2);
                     //解码器id
                     enum AVCodecID codecID = codecCtx->codec_id;
                     //根据解码器id找到对应名称
@@ -80,7 +84,7 @@ int MRStreamProber::probe(const char *url,const char **result){
                     //获取音频采样格式名称
                     const char * formatDesc = av_get_sample_fmt_name(format);
                     
-                    sprintf(str + strlen(str),"\n\nAudio:\n%d Kbps，%.1f KHz， %d channels，%s，%s，duration:%lld",(int)(brate/1000.0),sample_rate/1000.0,channels,codecDesc,formatDesc,duration);
+                    sprintf(str + strlen(str),"\n\nAudio:\n%d Kbps，%.1f KHz， %d channels，%s，%s，duration:%llds",(int)(brate/1000.0),sample_rate/1000.0,channels,codecDesc,formatDesc,duration);
                 }
                     break;
                     ///视频流
@@ -97,9 +101,11 @@ int MRStreamProber::probe(const char *url,const char **result){
                     //根据解码器id找到对应名称
                     const char *codecDesc = avcodec_get_name(codecID);
                     //视频像素格式
-                    enum AVPixelFormat format = codecCtx->pix_fmt;
+                    enum AVPixelFormat pix_fmt = codecCtx->pix_fmt;
                     //获取视频像素格式名称
-                    const char * formatDesc = av_get_pix_fmt_name(format);
+                    const char * formatDesc = av_get_pix_fmt_name(pix_fmt);
+                    enum AVColorSpace color_space = codecCtx->colorspace;
+                    const char *color_space_name = av_get_colorspace_name(color_space);
                     ///帧率
                     float fps, timebase = 0.04;
                     if (stream->time_base.den && stream->time_base.num) {
@@ -114,7 +120,7 @@ int MRStreamProber::probe(const char *url,const char **result){
                         fps = 1.0 / timebase;
                     }
                     
-                    sprintf(str + strlen(str),"\n\nVideo:\n%dKbps，%d*%d，at %.3fps， %s， %s",(int)(brate/1024.0),vwidth,vheight,fps,codecDesc,formatDesc);
+                    sprintf(str + strlen(str),"\n\nVideo:\n%dKbps，%d*%d，at %.2ffps，%s， %s(%s)",(int)(brate/1024.0),vwidth,vheight,fps,codecDesc,formatDesc,color_space_name);
                 }
                     break;
                 case AVMEDIA_TYPE_ATTACHMENT:
