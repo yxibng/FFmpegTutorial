@@ -1,0 +1,9 @@
+# use_frameworks!
+
+platform :ios, '8.0'
+
+target 'MRMoviePlayer_Example' do
+  pod 'MRFFmpegPod', :podspec => 'https://raw.githubusercontent.com/debugly/MRFFToolChainPod/master/MRFFmpeg3.4.7.podspec'
+  pod 'MRMoviePlayer', :path => '../'
+
+end

@@ -1,0 +1,36 @@
+PODS:
+  - MRFFmpegPod (3.4.7):
+    - MRFFmpegPod/libavcodec (= 3.4.7)
+    - MRFFmpegPod/libavdevice (= 3.4.7)
+    - MRFFmpegPod/libavfilter (= 3.4.7)
+    - MRFFmpegPod/libavformat (= 3.4.7)
+    - MRFFmpegPod/libavutil (= 3.4.7)
+    - MRFFmpegPod/libswresample (= 3.4.7)
+    - MRFFmpegPod/libswscale (= 3.4.7)
+  - MRFFmpegPod/libavcodec (3.4.7)
+  - MRFFmpegPod/libavdevice (3.4.7)
+  - MRFFmpegPod/libavfilter (3.4.7)
+  - MRFFmpegPod/libavformat (3.4.7)
+  - MRFFmpegPod/libavutil (3.4.7)
+  - MRFFmpegPod/libswresample (3.4.7)
+  - MRFFmpegPod/libswscale (3.4.7)
+  - MRMoviePlayer (0.1.0):
+    - MRFFmpegPod
+
+DEPENDENCIES:
+  - MRFFmpegPod (from `https://raw.githubusercontent.com/debugly/MRFFToolChainPod/master/MRFFmpeg3.4.7.podspec`)
+  - MRMoviePlayer (from `../`)
+
+EXTERNAL SOURCES:
+  MRFFmpegPod:
+    :podspec: https://raw.githubusercontent.com/debugly/MRFFToolChainPod/master/MRFFmpeg3.4.7.podspec
+  MRMoviePlayer:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  MRFFmpegPod: 5bcf83d703ccc90de0d25f03140118fa9dbc119c
+  MRMoviePlayer: ad2a30e310852a0394069f5edabc97f7c76c5852
+
+PODFILE CHECKSUM: e247637c6e4b87ced29c9b2e04aac08e4fc48db7
+
+COCOAPODS: 1.8.4
