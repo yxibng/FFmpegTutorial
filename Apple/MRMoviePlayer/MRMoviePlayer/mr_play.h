@@ -24,6 +24,13 @@ typedef enum MRSampleFormat{
     MR_SAMPLE_FMT_FLTP = 1 << 3,        ///< float, planar
 }MRSampleFormat;
 
+typedef enum MRPixelFormat{
+    MR_PIX_FMT_NONE = -1,
+    MR_PIX_FMT_YUV420P = 1 << 0,   ///< planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples)
+    MR_PIX_FMT_NV12 = 1 << 1,      ///< planar YUV 4:2:0, 12bpp, 1 plane for Y and 1 plane for the UV components, which are interleaved (first byte U and the following byte V)
+    MR_PIX_FMT_NV21 = 1 << 2,      ///< like NV12, but U and V bytes are swapped
+}MRPixelFormat;
+
 static inline int mr_sample_fmt_is_planar(MRSampleFormat sample_fmt){
     if (sample_fmt == MR_SAMPLE_FMT_S16P || sample_fmt == MR_SAMPLE_FMT_FLTP) {
         return 1;
@@ -39,6 +46,8 @@ typedef struct mr_init_params{
     ///传入支持的音频采样率和格式，好让播放器决定是否需要重采样
     int supported_sample_fmts;
     int supported_sample_rate;
+    ///传入支持的视频像素格式格式，好让播放器决定是否需要转换格式
+    int supported_pixel_fmts;
 }mr_init_params;
 
 ///创建播放器实例

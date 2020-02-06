@@ -18,6 +18,8 @@
 #include <libavutil/time.h>
 #include <libswresample/swresample.h>
 #include <libavutil/opt.h>
+#include <libswscale/swscale.h>
+#include <libavutil/imgutils.h>
 
 #define MIN_PKT_DURATION 15
 #define MAX_QUEUE_SIZE (15 * 1024 * 1024)
@@ -230,8 +232,10 @@ typedef struct Decoder {
     SwrContext  *swr_ctx;
     enum AVSampleFormat target_sample_format;
     
-    //视频
+    //视频格式转换
     int pic_width,pic_height;
+    enum AVPixelFormat target_pixel_format;
+    struct SwsContext *sws_ctx;
 }Decoder;
 
 typedef struct Frame {
@@ -324,11 +328,6 @@ static void frame_queue_push(FrameQueue *f)
     pthread_mutex_unlock(&f->mutex);
 }
 
-static int frame_queue_nb_remaining(FrameQueue *f)
-{
-    return f->size;
-}
-
 static void frame_queue_unref_item(Frame *vp)
 {
     av_frame_unref(vp->frame);
@@ -367,24 +366,16 @@ static Frame *frame_queue_peek_readable(FrameQueue *f)
     return frame;
 }
 
-static Frame *frame_queue_peek_next(FrameQueue *f)
-{
-    return &f->queue[(f->rindex + 1) % f->max_size];
-}
-
-static Frame *frame_queue_peek_last(FrameQueue *f)
-{
-    return &f->queue[f->rindex];
-}
-
 typedef struct VideoState {
     
     const char *url;
     MsgFunc msg_func;
     void *msg_func_ctx;
+    
     int supported_sample_fmts;
     int supported_sample_rate;
     
+    int supported_pixel_fmts;
     DisplayFunc display_func;
     void *display_func_ctx;
     AVFrame *dispalying;
@@ -456,6 +447,40 @@ static enum AVSampleFormat MRSampleFormat2AV (MRSampleFormat mrsf){
     }
 }
 
+static MRPixelFormat AVPixelFormat2MR (enum AVPixelFormat avpf){
+    switch (avpf) {
+        case AV_PIX_FMT_YUV420P:
+            return MR_PIX_FMT_YUV420P;
+        case AV_PIX_FMT_NV12:
+            return MR_PIX_FMT_NV12;
+        case AV_PIX_FMT_NV21:
+            return MR_PIX_FMT_NV21;
+        default:
+        {
+            assert(0);
+            return MR_PIX_FMT_NONE;
+        }
+            break;
+    }
+}
+
+static enum AVPixelFormat MRPixelFormat2AV (MRPixelFormat mrpf){
+    switch (mrpf) {
+        case MR_PIX_FMT_YUV420P:
+            return AV_PIX_FMT_YUV420P;
+        case MR_PIX_FMT_NV12:
+            return AV_PIX_FMT_NV12;
+        case MR_PIX_FMT_NV21:
+            return AV_PIX_FMT_NV21;
+        default:
+        {
+            assert(0);
+            return AV_PIX_FMT_NONE;
+        }
+            break;
+    }
+}
+
 #pragma mark -
 #pragma mark - 音频重采样
 
@@ -468,24 +493,24 @@ static int create_swr_ctx_ifneed(VideoState *is,Decoder *decoder){
     
     bool matched = false;
     
-    if ((is->supported_sample_fmts & MR_SAMPLE_FMT_FLT) && (format == AV_SAMPLE_FMT_FLT)) {
+    if ((is->supported_sample_fmts & MR_SAMPLE_FMT_FLT) && (format == MRSampleFormat2AV(MR_SAMPLE_FMT_FLT))) {
         matched = true;
     }
     
     if (!matched) {
-        if ((is->supported_sample_fmts & MR_SAMPLE_FMT_FLTP) && (format == AV_SAMPLE_FMT_FLTP)) {
+        if ((is->supported_sample_fmts & MR_SAMPLE_FMT_FLTP) && (format == MRSampleFormat2AV(MR_SAMPLE_FMT_FLTP))) {
             matched = true;
         }
     }
     
     if (!matched) {
-        if ((is->supported_sample_fmts & MR_SAMPLE_FMT_S16) && (format == AV_SAMPLE_FMT_S16)) {
+        if ((is->supported_sample_fmts & MR_SAMPLE_FMT_S16) && (format == MRSampleFormat2AV(MR_SAMPLE_FMT_S16))) {
             matched = true;
         }
     }
     
     if (!matched) {
-        if ((is->supported_sample_fmts & MR_SAMPLE_FMT_S16P) && (format == AV_SAMPLE_FMT_S16P)) {
+        if ((is->supported_sample_fmts & MR_SAMPLE_FMT_S16P) && (format == MRSampleFormat2AV(MR_SAMPLE_FMT_S16P))) {
             matched = true;
         }
     }
@@ -529,7 +554,7 @@ static int create_swr_ctx_ifneed(VideoState *is,Decoder *decoder){
         matched = decoder->avctx->sample_rate == is->supported_sample_rate;
     }
     
-    ///不匹配，则需要重采样
+    ///不匹配，则需要创建重采样上下文
     if (!matched) {
         
         int64_t src_ch_layout = av_get_default_channel_layout(decoder->avctx->channels);
@@ -571,7 +596,7 @@ static int create_swr_ctx_ifneed(VideoState *is,Decoder *decoder){
 }
 
 static int resample_audio_frame(AVFrame **frame, VideoState *is){
-    AVFrame *audio_frame = *frame;
+    AVFrame *in_frame = *frame;
     int dst_rate = is->supported_sample_rate;
     
     Decoder d = is->auddec;
@@ -581,14 +606,115 @@ static int resample_audio_frame(AVFrame **frame, VideoState *is){
     av_opt_get_int(d.swr_ctx, "out_channel_layout", 0, &dst_ch_layout);
     
     AVFrame *out_frame = av_frame_alloc();
-    out_frame->channel_layout = audio_frame->channel_layout;
+    out_frame->channel_layout = in_frame->channel_layout;
     out_frame->sample_rate = dst_rate;
     out_frame->format = dst_sample_fmt;
     
-    int ret = swr_convert_frame(d.swr_ctx, out_frame, audio_frame);
+    int ret = swr_convert_frame(d.swr_ctx, out_frame, in_frame);
     if(ret < 0){
         // convert error, try next frame
         av_log(NULL, AV_LOG_ERROR, "fail resample audio");
+        av_frame_free(&out_frame);
+        return -1;
+    }
+    
+    av_frame_free(frame);
+    *frame = out_frame;
+    
+    return 0;
+}
+
+#pragma mark -
+#pragma mark - 视频像素格式转换
+
+static int create_sws_ctx_ifneed(VideoState *is,Decoder *decoder){
+    
+    if (is->supported_pixel_fmts == 0) {
+        return 1;
+    }
+    
+    enum AVPixelFormat format = decoder->avctx->pix_fmt;
+    
+    bool matched = false;
+    
+    if ((is->supported_pixel_fmts & MR_PIX_FMT_YUV420P) && (format == MRPixelFormat2AV(MR_PIX_FMT_YUV420P))) {
+        matched = true;
+        return 0;
+    }
+    
+    if (!matched) {
+        if ((is->supported_pixel_fmts & MR_PIX_FMT_NV12) && (format == MRPixelFormat2AV(MR_PIX_FMT_NV12))) {
+            matched = true;
+            return 0;
+        }
+    }
+    
+    if (!matched) {
+        if ((is->supported_pixel_fmts & MR_PIX_FMT_NV21) && (format == MRPixelFormat2AV(MR_PIX_FMT_NV21))) {
+            matched = true;
+            return 0;
+        }
+    }
+    
+    if (!matched) {
+        enum AVPixelFormat first_supported_format = AV_PIX_FMT_NONE;
+        
+        if ((is->supported_pixel_fmts & MR_PIX_FMT_YUV420P)) {
+            first_supported_format = MRPixelFormat2AV(MR_PIX_FMT_YUV420P);
+        }
+        
+        if (AV_PIX_FMT_NONE == first_supported_format) {
+            if ((is->supported_pixel_fmts & MR_PIX_FMT_NV12)) {
+                first_supported_format = MRPixelFormat2AV(MR_PIX_FMT_NV12);
+            }
+        }
+        
+        if (AV_PIX_FMT_NONE == first_supported_format) {
+            if ((is->supported_pixel_fmts & MR_PIX_FMT_NV21)) {
+                first_supported_format = MRPixelFormat2AV(MR_PIX_FMT_NV21);
+            }
+        }
+        
+        if (AV_PIX_FMT_NONE == first_supported_format) {
+            return -1;
+        }
+        
+        decoder->target_pixel_format = first_supported_format;
+    } else {
+        decoder->target_pixel_format = format;
+    }
+    
+    ///不匹配，则需要创建像素格式转换上下文
+    if (!matched) {
+        
+        enum AVPixelFormat src_pix_fmt = decoder->avctx->pix_fmt;
+        enum AVPixelFormat dst_pix_fmt = decoder->target_pixel_format;
+        
+        decoder->sws_ctx = sws_getContext(decoder->pic_width, decoder->pic_height, src_pix_fmt, decoder->pic_width, decoder->pic_height, dst_pix_fmt, SWS_BICUBIC, NULL, NULL, NULL);
+        
+        if (NULL == decoder->sws_ctx) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static int rescale_video_frame(AVFrame **frame, VideoState *is){
+    AVFrame *in_frame = *frame;
+    Decoder d = is->viddec;
+    
+    AVFrame *out_frame = av_frame_alloc();
+    out_frame->format = d.target_pixel_format;
+    out_frame->width  = d.pic_width;
+    out_frame->height = d.pic_height;
+    
+    av_image_alloc(out_frame->data, out_frame->linesize, d.pic_width, d.pic_height, d.target_pixel_format, 1);
+    
+    int ret = sws_scale(d.sws_ctx, (const uint8_t* const*)in_frame->data, in_frame->linesize, 0, in_frame->height, out_frame->data, out_frame->linesize);
+    if(ret < 0){
+        // convert error, try next frame
+        av_log(NULL, AV_LOG_ERROR, "fail scale video");
+        av_frame_free(&out_frame);
         return -1;
     }
     
@@ -698,6 +824,15 @@ void * video_decode_func (void *ptr){
     int got_frame = 0;
     do {
         got_frame = decoder_decode_frame(&is->viddec, frame);
+        
+        ///存在视频转换器，则进行格式转换
+        if(is->viddec.sws_ctx){
+            if (rescale_video_frame(&frame, is)) {
+                av_frame_free(&frame);
+                break;
+            }
+        }
+        
         Frame *af = NULL;
         if (NULL == (af = frame_queue_peek_writable(&is->pictq))){
             av_frame_free(&frame);
@@ -794,7 +929,8 @@ static int stream_component_open(VideoState *is, int stream_index){
                 av_log(NULL, AV_LOG_ERROR, "can't create_swr_ctx");
                 return -1;
             }
-        msg_post_arg1(is,MR_Msg_Type_InitAudioRender,AVSampleFormat2MR(is->auddec.target_sample_format));
+            
+            msg_post_arg1(is,MR_Msg_Type_InitAudioRender,AVSampleFormat2MR(is->auddec.target_sample_format));
             
             if (decoder_start(&is->auddec, audio_decode_func, (void *)is)) {
                 avcodec_free_context(&avctx);
@@ -807,12 +943,19 @@ static int stream_component_open(VideoState *is, int stream_index){
         {
             is->video_stream = stream_index;
             is->video_st = stream;
+            
             decoder_init(&is->viddec, &is->videoq, avctx, "video_decode");
             
             ///画面宽度，单位像素
             is->viddec.pic_width = avctx->width;
             ///画面高度，单位像素
             is->viddec.pic_height = avctx->height;
+            
+            if (create_sws_ctx_ifneed(is, &is->viddec)) {
+                avcodec_free_context(&avctx);
+                av_log(NULL, AV_LOG_ERROR, "can't create_sws_ctx.\n");
+                return -1;
+            }
             
             msg_post_arg2(is,MR_Msg_Type_InitVideoRender, is->viddec.pic_width, is->viddec.pic_height);
             
@@ -847,17 +990,24 @@ static int need_read_more_packet(VideoState *is){
 
 static void *read_thread(void *ptr){
     VideoState *is = ptr;
-    AVFormatContext *ic = avformat_alloc_context();
-    if(!ic){
-        av_log(NULL, AV_LOG_FATAL, "Could not alloc context.\n");
-        return NULL;
-    }
-    is->ic = ic;
-    int ret = avformat_open_input(&ic, is->url, NULL, NULL);
+    AVFormatContext *ic = NULL;
+    AVDictionary *format_opts = NULL;
+    av_dict_set(&format_opts, "safe", "0", 0);
+    int ret = avformat_open_input(&ic, is->url, NULL, &format_opts);
     if (ret) {
         av_log(NULL, AV_LOG_FATAL, "Could not open input(%d).\n",ret);
         return NULL;
     }
+    
+    ///不调用这个方法，发现视频的 pix_fmt 未知
+    ret = avformat_find_stream_info(ic, NULL);
+    if (ret) {
+        avformat_close_input(&ic);
+        av_log(NULL, AV_LOG_FATAL, "Could not find steam info(%d).\n",ret);
+        return NULL;
+    }
+     
+    is->ic = ic;
     
     int st_index[AVMEDIA_TYPE_NB];
     memset(st_index, -1, sizeof(st_index));
@@ -1084,6 +1234,9 @@ int mr_fetch_planar_sample(MRPlayer opaque, uint8_t *l_buffer, int l_size, uint8
 }
 
 static void video_refresh(VideoState *is,double *remaining_time){
+    //release old pic
+    av_frame_unref(is->dispalying);
+    
     Frame *af;
     if (!(af = frame_queue_peek_readable(&is->pictq))){
         return;
@@ -1096,9 +1249,7 @@ static void video_refresh(VideoState *is,double *remaining_time){
     const double frameDuration = av_frame_get_pkt_duration(af->frame) * 0.00004;
     DEBUGLog("display frame:%g\n",frameDuration);
     
-    av_frame_unref(is->dispalying);
-    
-    // set to displaying frame.
+    // retain new pic.
     av_frame_move_ref(is->dispalying, af->frame);
     
     frame_queue_next(&is->pictq);
@@ -1141,20 +1292,22 @@ static void ff_global_init(){
 #pragma mark - 创建播放器
 
 void * mr_player_instance_create(mr_init_params* params){
-    VideoState *vs = av_mallocz(sizeof(VideoState));
-    if (!vs) {
+    VideoState *is = av_mallocz(sizeof(VideoState));
+    if (!is) {
         return NULL;
     }
-    vs->url = av_strdup(params->url);
-    vs->msg_func = params->msg_func;
-    vs->msg_func_ctx = params->msg_func_ctx;
+    is->url = av_strdup(params->url);
+    is->msg_func = params->msg_func;
+    is->msg_func_ctx = params->msg_func_ctx;
     
-    vs->supported_sample_fmts = params->supported_sample_fmts;
-    vs->supported_sample_rate = params->supported_sample_rate;
+    is->supported_sample_fmts = params->supported_sample_fmts;
+    is->supported_sample_rate = params->supported_sample_rate;
+    
+    is->supported_pixel_fmts = params->supported_pixel_fmts;
     
     ff_global_init();
     
-    return vs;
+    return is;
 }
 
 #pragma mark -

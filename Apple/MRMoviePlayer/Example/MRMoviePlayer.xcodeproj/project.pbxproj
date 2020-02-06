@@ -18,7 +18,8 @@
 		707057BEFCAF18CA0A8B715C /* libPods-MRMoviePlayer_Example.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 96FE0240EE649B093E9F024E /* libPods-MRMoviePlayer_Example.a */; };
 		71719F9F1E33DC2100824A3D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 71719F9D1E33DC2100824A3D /* LaunchScreen.storyboard */; };
 		873B8AEB1B1F5CCA007FD442 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 873B8AEA1B1F5CCA007FD442 /* Main.storyboard */; };
-		DDB0CA4D23E72989009CFFD7 /* OpenGLView20.mm in Sources */ = {isa = PBXBuildFile; fileRef = DDB0CA4B23E72989009CFFD7 /* OpenGLView20.mm */; };
+		DDB0CA5623EC367E009CFFD7 /* MRVideoRenderView.m in Sources */ = {isa = PBXBuildFile; fileRef = DDB0CA5323EC367E009CFFD7 /* MRVideoRenderView.m */; };
+		DDB0CA5723EC367E009CFFD7 /* MRConvertUtil.m in Sources */ = {isa = PBXBuildFile; fileRef = DDB0CA5523EC367E009CFFD7 /* MRConvertUtil.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,8 +45,10 @@
 		873B8AEA1B1F5CCA007FD442 /* Main.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = Main.storyboard; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		96FE0240EE649B093E9F024E /* libPods-MRMoviePlayer_Example.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MRMoviePlayer_Example.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A6905B892D973CD6738B575E /* MRMoviePlayer.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = MRMoviePlayer.podspec; path = ../MRMoviePlayer.podspec; sourceTree = "<group>"; };
-		DDB0CA4B23E72989009CFFD7 /* OpenGLView20.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = OpenGLView20.mm; sourceTree = "<group>"; };
-		DDB0CA4C23E72989009CFFD7 /* OpenGLView20.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OpenGLView20.h; sourceTree = "<group>"; };
+		DDB0CA5223EC367E009CFFD7 /* MRVideoRenderView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MRVideoRenderView.h; sourceTree = "<group>"; };
+		DDB0CA5323EC367E009CFFD7 /* MRVideoRenderView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MRVideoRenderView.m; sourceTree = "<group>"; };
+		DDB0CA5423EC367E009CFFD7 /* MRConvertUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MRConvertUtil.h; sourceTree = "<group>"; };
+		DDB0CA5523EC367E009CFFD7 /* MRConvertUtil.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MRConvertUtil.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -111,8 +114,10 @@
 				873B8AEA1B1F5CCA007FD442 /* Main.storyboard */,
 				6003F5A5195388D20070C39A /* MRViewController.h */,
 				6003F5A6195388D20070C39A /* MRViewController.m */,
-				DDB0CA4C23E72989009CFFD7 /* OpenGLView20.h */,
-				DDB0CA4B23E72989009CFFD7 /* OpenGLView20.mm */,
+				DDB0CA5423EC367E009CFFD7 /* MRConvertUtil.h */,
+				DDB0CA5523EC367E009CFFD7 /* MRConvertUtil.m */,
+				DDB0CA5223EC367E009CFFD7 /* MRVideoRenderView.h */,
+				DDB0CA5323EC367E009CFFD7 /* MRVideoRenderView.m */,
 				71719F9D1E33DC2100824A3D /* LaunchScreen.storyboard */,
 				6003F5A8195388D20070C39A /* Images.xcassets */,
 				6003F594195388D20070C39A /* Supporting Files */,
@@ -172,6 +177,11 @@
 				CLASSPREFIX = MR;
 				LastUpgradeCheck = 0720;
 				ORGANIZATIONNAME = qianlongxu;
+				TargetAttributes = {
+					6003F589195388D20070C39A = {
+						DevelopmentTeam = KCE7BVJLX3;
+					};
+				};
 			};
 			buildConfigurationList = 6003F585195388D10070C39A /* Build configuration list for PBXProject "MRMoviePlayer" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -237,9 +247,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				6003F59E195388D20070C39A /* MRAppDelegate.m in Sources */,
-				DDB0CA4D23E72989009CFFD7 /* OpenGLView20.mm in Sources */,
+				DDB0CA5723EC367E009CFFD7 /* MRConvertUtil.m in Sources */,
 				6003F5A7195388D20070C39A /* MRViewController.m in Sources */,
 				6003F59A195388D20070C39A /* main.m in Sources */,
+				DDB0CA5623EC367E009CFFD7 /* MRVideoRenderView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -343,11 +354,12 @@
 			baseConfigurationReference = 3E52CDCD5C2975F46F6ACC24 /* Pods-MRMoviePlayer_Example.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = KCE7BVJLX3;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MRMoviePlayer/MRMoviePlayer-Prefix.pch";
 				INFOPLIST_FILE = "MRMoviePlayer/MRMoviePlayer-Info.plist";
 				MODULE_NAME = ExampleApp;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.demo.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_BUNDLE_IDENTIFIER = "cn.debugly.MRMoviePlayer-Example";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 				WRAPPER_EXTENSION = app;
@@ -359,11 +371,12 @@
 			baseConfigurationReference = 104F34DE45DEA3D901AE3D73 /* Pods-MRMoviePlayer_Example.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = KCE7BVJLX3;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MRMoviePlayer/MRMoviePlayer-Prefix.pch";
 				INFOPLIST_FILE = "MRMoviePlayer/MRMoviePlayer-Info.plist";
 				MODULE_NAME = ExampleApp;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.cocoapods.demo.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_BUNDLE_IDENTIFIER = "cn.debugly.MRMoviePlayer-Example";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 				WRAPPER_EXTENSION = app;

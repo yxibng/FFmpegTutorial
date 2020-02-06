@@ -8,9 +8,10 @@
 
 #import "MRViewController.h"
 #import <MRMoviePlayer/mr_play.h>
-#import "OpenGLView20.h"
-#include <AudioUnit/AudioUnit.h>
-#include <AVFoundation/AVFoundation.h>
+#import <AudioUnit/AudioUnit.h>
+#import <AVFoundation/AVFoundation.h>
+#import "MRVideoRenderView.h"
+#import "MRConvertUtil.h"
 
 @interface MRViewController ()
 
@@ -18,20 +19,13 @@
 @property (nonatomic,assign) double targetSampleRate;
 //声音大小
 @property (nonatomic,assign) float outputVolume;
-//音频播放器
-@property (nonatomic,assign) AudioUnit audioUnit;
-//音频信息结构体
-@property (nonatomic,assign) AudioStreamBasicDescription outputFormat;
-//音频重采样 packet 格式buffer
-@property (nonatomic,assign) uint8_t     *audioBuffer4Packet;
-@property (nonatomic,assign) NSUInteger  audioBuffer4PacketSize;
-//音频重采样 planar 格式buffer
-@property (nonatomic,assign) uint8_t     *audioBuffer4PlanarL;
-@property (nonatomic,assign) uint8_t     *audioBuffer4PlanarR;
-@property (nonatomic,assign) NSUInteger  audioBuffer4PlanarSize;
+//目标音频格式（采样深度）
 @property (nonatomic,assign) MRSampleFormat targetSampleFormat;
+//音频渲染
+@property (nonatomic,assign) AudioUnit audioUnit;
 
-@property (weak, nonatomic) OpenGLView20 *glView;
+@property (strong, nonatomic) MRVideoRenderView *renderView;
+
 @property (assign, nonatomic) MRPlayer player;
 
 @end
@@ -40,9 +34,7 @@
 
 int displayFunc(void *context,AVFrame *f){
     MRViewController *vc = (__bridge MRViewController *)(context);
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [vc.glView displayYUV420pData:f];
-    });
+    [vc.renderView enqueueAVFrame:f];
     return 0;
 }
 
@@ -77,13 +69,17 @@ static void msgFunc (void *context,MR_Msg *msg){
 
 - (void)setupVideoRender:(int)width height:(int)height
 {
-    CGSize vSize = self.view.bounds.size;
-    CGFloat vh = vSize.width * height / width;
-    CGRect frame = CGRectMake(0, (vSize.height-vh)/2, vSize.width , vh);
+//    CGSize vSize = self.view.bounds.size;
+//    CGFloat vh = vSize.width * height / width;
+//    CGRect frame = CGRectMake(0, (vSize.height-vh)/2, vSize.width , vh);
     
-    OpenGLView20 *glView = [[OpenGLView20 alloc]initWithFrame:frame];
-    [self.view addSubview:glView];
-    self.glView = glView;
+    if(!self.renderView){
+        self.renderView = [[MRVideoRenderView alloc] init];
+        self.renderView.frame = self.view.bounds;
+        self.renderView.contentMode = UIViewContentModeScaleAspectFit;
+        self.renderView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [self.view addSubview:self.renderView];
+    }
 }
 
 - (void)setupAudioRender:(MRSampleFormat)targetSampleFormat
@@ -116,18 +112,20 @@ static void msgFunc (void *context,MR_Msg *msg){
         OSStatus status = AudioComponentInstanceNew(component, &_audioUnit);
         NSAssert(noErr == status, @"AudioComponentInstanceNew");
         
-        UInt32 size = sizeof(self.outputFormat);
+        AudioStreamBasicDescription outputFormat;
+        
+        UInt32 size = sizeof(outputFormat);
         /// 获取默认的输入信息
-        AudioUnitGetProperty(_audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, kOutputBus, &_outputFormat, &size);
+        AudioUnitGetProperty(_audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, kOutputBus, &outputFormat, &size);
         //设置采样率
-        _outputFormat.mSampleRate = _targetSampleRate;
+        outputFormat.mSampleRate = _targetSampleRate;
         /**不使用视频的原声道数_audioCodecCtx->channels;
          mChannelsPerFrame 这个值决定了后续AudioUnit索要数据时 ioData->mNumberBuffers 的值！
          如果写成1会影响Planar类型，就不会开两个buffer了！！因此这里写死为2！
          */
-        _outputFormat.mChannelsPerFrame = 2;
-        _outputFormat.mFormatID = kAudioFormatLinearPCM;
-        _outputFormat.mReserved = 0;
+        outputFormat.mChannelsPerFrame = 2;
+        outputFormat.mFormatID = kAudioFormatLinearPCM;
+        outputFormat.mReserved = 0;
         
         bool isFloat = targetSampleFormat == MR_SAMPLE_FMT_FLT || targetSampleFormat == MR_SAMPLE_FMT_FLTP;
         bool isS16 = targetSampleFormat == MR_SAMPLE_FMT_S16 || targetSampleFormat == MR_SAMPLE_FMT_S16P;
@@ -135,35 +133,35 @@ static void msgFunc (void *context,MR_Msg *msg){
         bool isPlanar = mr_sample_fmt_is_planar(targetSampleFormat);
         
         if (isS16){
-            _outputFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger;
-            _outputFormat.mFramesPerPacket = 1;
-            _outputFormat.mBitsPerChannel = sizeof(SInt16) * 8;
+            outputFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger;
+            outputFormat.mFramesPerPacket = 1;
+            outputFormat.mBitsPerChannel = sizeof(SInt16) * 8;
         } else if (isFloat){
-            _outputFormat.mFormatFlags = kAudioFormatFlagIsFloat;
-            _outputFormat.mFramesPerPacket = 1;
-            _outputFormat.mBitsPerChannel = sizeof(float) * 8;
+            outputFormat.mFormatFlags = kAudioFormatFlagIsFloat;
+            outputFormat.mFramesPerPacket = 1;
+            outputFormat.mBitsPerChannel = sizeof(float) * 8;
         } else {
             NSAssert(NO, @"不支持的音频采样格式%d",targetSampleFormat);
         }
         
         if (isPlanar) {
-            _outputFormat.mFormatFlags |= kAudioFormatFlagIsNonInterleaved;
-            _outputFormat.mBytesPerFrame = _outputFormat.mBitsPerChannel / 8;
-            _outputFormat.mBytesPerPacket = _outputFormat.mBytesPerFrame * _outputFormat.mFramesPerPacket;
+            outputFormat.mFormatFlags |= kAudioFormatFlagIsNonInterleaved;
+            outputFormat.mBytesPerFrame = outputFormat.mBitsPerChannel / 8;
+            outputFormat.mBytesPerPacket = outputFormat.mBytesPerFrame * outputFormat.mFramesPerPacket;
         } else {
-            _outputFormat.mFormatFlags |= kAudioFormatFlagIsPacked;
-            _outputFormat.mBytesPerFrame = (_outputFormat.mBitsPerChannel / 8) * _outputFormat.mChannelsPerFrame;
-            _outputFormat.mBytesPerPacket = _outputFormat.mBytesPerFrame * _outputFormat.mFramesPerPacket;
+            outputFormat.mFormatFlags |= kAudioFormatFlagIsPacked;
+            outputFormat.mBytesPerFrame = (outputFormat.mBitsPerChannel / 8) * outputFormat.mChannelsPerFrame;
+            outputFormat.mBytesPerPacket = outputFormat.mBytesPerFrame * outputFormat.mFramesPerPacket;
         }
         
         status = AudioUnitSetProperty(_audioUnit,
                              kAudioUnitProperty_StreamFormat,
                              kAudioUnitScope_Input,
                              kOutputBus,
-                             &_outputFormat, size);
+                             &outputFormat, size);
         NSAssert(noErr == status, @"AudioUnitSetProperty");
         ///get之后刷新这个值；
-        _targetSampleRate  = _outputFormat.mSampleRate;
+        _targetSampleRate  = outputFormat.mSampleRate;
         
         UInt32 flag = 0;
         AudioUnitSetProperty(_audioUnit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input, kInputBus, &flag, sizeof(flag));
@@ -273,7 +271,7 @@ static inline OSStatus MRRenderCallback(void *inRefCon,
         // FLOAT: 具体含义是使用 float 类型存储量化的采样点，比 SInt16 精度要高出很多！当然空间也大些！
         // Planar: 二维的，所以会把左右声道使用两个数组分开存储，每个数组里的元素是同一个声道的！
         
-        //when _outputFormat.mChannelsPerFrame == 2
+        //when outputFormat.mChannelsPerFrame == 2
         if (ioData->mNumberBuffers == 2) {
             // 2. 向缓存的音频帧索要 ioData->mBuffers[0].mDataByteSize 个字节的数据
             /*
@@ -286,7 +284,7 @@ static inline OSStatus MRRenderCallback(void *inRefCon,
             //3. 获取左右声道数据
             [self fetchPlanarSample:ioData->mBuffers[0].mData leftSize:ioData->mBuffers[0].mDataByteSize right:ioData->mBuffers[1].mData rightSize:ioData->mBuffers[1].mDataByteSize];
         }
-        //when _outputFormat.mChannelsPerFrame == 1;不会左右分开
+        //when outputFormat.mChannelsPerFrame == 1;不会左右分开
         else {
             [self fetchPlanarSample:ioData->mBuffers[0].mData leftSize:ioData->mBuffers[0].mDataByteSize right:NULL rightSize:0];
         }
@@ -330,6 +328,7 @@ static inline OSStatus MRRenderCallback(void *inRefCon,
     params->msg_func_ctx = (__bridge void *)self;
     params->supported_sample_rate = _targetSampleRate;
     params->supported_sample_fmts = MR_SAMPLE_FMT_S16P | MR_SAMPLE_FMT_S16 | MR_SAMPLE_FMT_FLTP | MR_SAMPLE_FMT_FLT;
+    params->supported_pixel_fmts = MR_PIX_FMT_NV12;//MR_PIX_FMT_YUV420P;//
     
     MRPlayer player = mr_player_instance_create(params);
     mr_set_display_func(player,(__bridge void *)self, displayFunc);
