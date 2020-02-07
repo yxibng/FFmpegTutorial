@@ -33,12 +33,17 @@
     }
 }
 
+- (void)_init {
+    self.layer.opaque = YES;
+    self.usePool = YES;
+    [self setContentMode:UIViewContentModeScaleToFill];
+}
+
 - (instancetype)initWithCoder:(NSCoder *)aDecoder
 {
     self = [super initWithCoder:aDecoder];
     if (self) {
-        self.layer.opaque = YES;
-        [self setContentMode:UIViewContentModeScaleToFill];
+        [self _init];
     }
     return self;
 }
@@ -47,8 +52,7 @@
 {
     self = [super initWithFrame:frame];
     if (self) {
-        self.layer.opaque = YES;
-        [self setContentMode:UIViewContentModeScaleToFill];
+        [self _init];
     }
     return self;
 }
@@ -90,7 +94,7 @@
     }
 }
 
-- (CMSampleBufferRef)sampleBufferFromAVFrame:(AVFrame*)frame w:(int)w h:(int)h
+- (CMSampleBufferRef)createSampleBufferFromAVFrame:(AVFrame*)frame w:(int)w h:(int)h
 {
     if (self.usePool) {
         CVReturn theError;
@@ -110,9 +114,14 @@
         }
     }
     
-    CVPixelBufferRef pixelBuffer = [MRConvertUtil pixelBufferFromAVFrame:frame opt:self.pixelBufferPool];
+    CVPixelBufferRef pixelBuffer = [MRConvertUtil createCVPixelBufferFromAVFrame:frame opt:self.pixelBufferPool];
     
-    return [MRConvertUtil cmSampleBufferRefFromCVPixelBufferRef:pixelBuffer];
+    if (pixelBuffer) {
+        CMSampleBufferRef buffer = [MRConvertUtil createCMSampleBufferFromCVPixelBuffer:pixelBuffer];
+        CFRelease(pixelBuffer);
+        return buffer;
+    }
+    return NULL;
 }
 
 - (void)enqueueSampleBuffer:(CMSampleBufferRef)buffer
@@ -123,7 +132,7 @@
 
 - (void)enqueueAVFrame:(AVFrame *)aFrame
 {
-    CMSampleBufferRef sampleBuffer = [self sampleBufferFromAVFrame:aFrame w:aFrame->width h:aFrame->height];
+    CMSampleBufferRef sampleBuffer = [self createSampleBufferFromAVFrame:aFrame w:aFrame->width h:aFrame->height];
     if ((dispatch_queue_get_label(dispatch_get_main_queue()) == dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL))) {
         [self enqueueSampleBuffer:sampleBuffer];
     } else {
@@ -131,6 +140,7 @@
             [self enqueueSampleBuffer:sampleBuffer];
         });
     }
+    CFRelease(sampleBuffer);
 }
 
 @end

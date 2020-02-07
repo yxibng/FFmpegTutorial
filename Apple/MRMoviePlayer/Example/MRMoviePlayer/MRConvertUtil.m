@@ -16,12 +16,12 @@
 #pragma mark - YUV(NV12)-->CVPixelBufferRef Conversion
 
 //https://stackoverflow.com/questions/25659671/how-to-convert-from-yuv-to-ciimage-for-ios
-+ (CVPixelBufferRef)pixelBufferFromAVFrame:(AVFrame*)aFrame
++ (CVPixelBufferRef)createCVPixelBufferFromAVFrame:(AVFrame*)aFrame
 {
-    return [self pixelBufferFromAVFrame:aFrame opt:NULL];
+    return [self createCVPixelBufferFromAVFrame:aFrame opt:NULL];
 }
 
-+ (CVPixelBufferRef)pixelBufferFromAVFrame:(AVFrame*)aFrame opt:(CVPixelBufferPoolRef _Nullable)poolRef
++ (CVPixelBufferRef)createCVPixelBufferFromAVFrame:(AVFrame*)aFrame opt:(CVPixelBufferPoolRef _Nullable)poolRef
 {
     CVPixelBufferRef pixelBuffer = NULL;
     CVReturn result = kCVReturnError;
@@ -56,12 +56,14 @@
         memcpy(uvDestPlane, y_ch1, aFrame->linesize[1] * BYTE_ALIGN_2(h)/2);
         CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
     }
-    
-    return (CVPixelBufferRef)CFAutorelease(pixelBuffer);
+    return pixelBuffer;
+//    return (CVPixelBufferRef)CFAutorelease(pixelBuffer);
 }
 
 + (UIImage *)imageFromCVPixelBuffer:(CVPixelBufferRef)pixelBuffer
 {
+    NSParameterAssert(pixelBuffer);
+    CFRetain(pixelBuffer);
     // CIImage Conversion
     CIImage *coreImage = [CIImage imageWithCVPixelBuffer:pixelBuffer];
     CIContext *context = [CIContext contextWithOptions:nil];
@@ -80,6 +82,7 @@
     
     NSLog(@"decode an image cost :%g",end-begin);
     CGImageRelease(cgImage);
+    CFRelease(pixelBuffer);
     return uiImage;
 }
 
@@ -121,18 +124,21 @@
 
 + (UIImage *)imageFromAVFrameOverPixelBuffer:(AVFrame*)aFrame
 {
-    CVPixelBufferRef pixelBuffer = [self pixelBufferFromAVFrame:aFrame];
+    CVPixelBufferRef pixelBuffer = [self createCVPixelBufferFromAVFrame:aFrame];
     if (pixelBuffer) {
-        return [self imageFromCVPixelBuffer:pixelBuffer];
+        UIImage *img = [self imageFromCVPixelBuffer:pixelBuffer];
+        CFRelease(pixelBuffer);
+        return img;
     }
     return nil;
 }
 
 #pragma mark - CVPixelBufferRef-->CMSampleBufferRef
 
-+ (CMSampleBufferRef)cmSampleBufferRefFromCVPixelBufferRef:(CVPixelBufferRef)pixelBuffer
++ (CMSampleBufferRef)createCMSampleBufferFromCVPixelBuffer:(CVPixelBufferRef)pixelBuffer
 {
     if (pixelBuffer) {
+        CFRetain(pixelBuffer);
         //不设置具体时间信息
         CMSampleTimingInfo timing = {kCMTimeInvalid, kCMTimeInvalid, kCMTimeInvalid};
         //获取视频信息
@@ -148,8 +154,8 @@
         CFArrayRef attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, YES);
         CFMutableDictionaryRef dict = (CFMutableDictionaryRef)CFArrayGetValueAtIndex(attachments, 0);
         CFDictionarySetValue(dict, kCMSampleAttachmentKey_DisplayImmediately, kCFBooleanTrue);
-        
-        return (CMSampleBufferRef)CFAutorelease(sampleBuffer);
+        CFRelease(pixelBuffer);
+        return sampleBuffer;//(CMSampleBufferRef)CFAutorelease(sampleBuffer);
     }
     return NULL;
 }

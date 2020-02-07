@@ -5,6 +5,7 @@
 //  Created by Matt Reach on 2019/1/25.
 //  Copyright © 2019 Awesome FFmpeg Study Demo. All rights reserved.
 //
+// CFAutorelease CVPixelBufferRef or CMSampleBufferRef cause memory leak！
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
@@ -14,13 +15,15 @@
 
 @interface MRConvertUtil : NSObject
 
-+ (CVPixelBufferRef)pixelBufferFromAVFrame:(AVFrame*)pFrame;
-+ (CVPixelBufferRef)pixelBufferFromAVFrame:(AVFrame*)pFrame opt:(CVPixelBufferPoolRef)poolRef;
+///need CFRelease the result
++ (CVPixelBufferRef)createCVPixelBufferFromAVFrame:(AVFrame*)pFrame;
+///need CFRelease the result
++ (CVPixelBufferRef)createCVPixelBufferFromAVFrame:(AVFrame*)pFrame opt:(CVPixelBufferPoolRef)poolRef;
 
 + (UIImage *)imageFromCVPixelBuffer:(CVPixelBufferRef)pixelBuffer;
 + (UIImage *)imageFromAVFrameOverBitmap:(AVFrame*)aFrame;
 + (UIImage *)imageFromAVFrameOverPixelBuffer:(AVFrame*)aFrame;
-
-+ (CMSampleBufferRef)cmSampleBufferRefFromCVPixelBufferRef:(CVPixelBufferRef)pixelBuffer;
+///need CFRelease the result
++ (CMSampleBufferRef)createCMSampleBufferFromCVPixelBuffer:(CVPixelBufferRef)pixelBuffer;
 
 @end

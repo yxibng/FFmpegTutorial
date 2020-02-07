@@ -322,7 +322,7 @@ static inline OSStatus MRRenderCallback(void *inRefCon,
     bzero(params, sizeof(mr_init_params));
     params->url = "http://localhost/movies/%e5%82%b2%e6%85%a2%e4%b8%8e%e5%81%8f%e8%a7%81.BD1280%e8%b6%85%e6%b8%85%e5%9b%bd%e8%8b%b1%e5%8f%8c%e8%af%ad%e4%b8%ad%e8%8b%b1%e5%8f%8c%e5%ad%97.mp4";
     params->url = "http://localhost/ffmpeg-test/sintel.mp4";
-    params->url = "http://localhost/ffmpeg-test/xp5.mp4";
+    params->url = "http://192.168.3.2/ffmpeg-test/xp5.mp4";
     
     params->msg_func = &msgFunc;
     params->msg_func_ctx = (__bridge void *)self;

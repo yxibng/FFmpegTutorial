@@ -595,22 +595,22 @@ static int create_swr_ctx_ifneed(VideoState *is,Decoder *decoder){
     return 0;
 }
 
-static int resample_audio_frame(AVFrame **frame, VideoState *is){
-    AVFrame *in_frame = *frame;
+static int resample_audio_frame(AVFrame *in, AVFrame **out, VideoState *is){
+    
     int dst_rate = is->supported_sample_rate;
     
     Decoder d = is->auddec;
     enum AVSampleFormat dst_sample_fmt = d.target_sample_format;
     
-    int64_t dst_ch_layout;
-    av_opt_get_int(d.swr_ctx, "out_channel_layout", 0, &dst_ch_layout);
+    //int64_t dst_ch_layout;
+    //av_opt_get_int(d.swr_ctx, "out_channel_layout", 0, &dst_ch_layout);
     
     AVFrame *out_frame = av_frame_alloc();
-    out_frame->channel_layout = in_frame->channel_layout;
+    out_frame->channel_layout = in->channel_layout;
     out_frame->sample_rate = dst_rate;
     out_frame->format = dst_sample_fmt;
     
-    int ret = swr_convert_frame(d.swr_ctx, out_frame, in_frame);
+    int ret = swr_convert_frame(d.swr_ctx, out_frame, in);
     if(ret < 0){
         // convert error, try next frame
         av_log(NULL, AV_LOG_ERROR, "fail resample audio");
@@ -618,8 +618,7 @@ static int resample_audio_frame(AVFrame **frame, VideoState *is){
         return -1;
     }
     
-    av_frame_free(frame);
-    *frame = out_frame;
+    *out = out_frame;
     
     return 0;
 }
@@ -699,18 +698,22 @@ static int create_sws_ctx_ifneed(VideoState *is,Decoder *decoder){
     return 0;
 }
 
-static int rescale_video_frame(AVFrame **frame, VideoState *is){
-    AVFrame *in_frame = *frame;
+#warning todo memory leak.
+
+static int rescale_video_frame(AVFrame *in, AVFrame **out, VideoState *is){
+    
+    assert(out);
+    
     Decoder d = is->viddec;
     
     AVFrame *out_frame = av_frame_alloc();
-    out_frame->format = d.target_pixel_format;
-    out_frame->width  = d.pic_width;
-    out_frame->height = d.pic_height;
+    out_frame->format  = d.target_pixel_format;
+    out_frame->width   = d.pic_width;
+    out_frame->height  = d.pic_height;
     
     av_image_alloc(out_frame->data, out_frame->linesize, d.pic_width, d.pic_height, d.target_pixel_format, 1);
     
-    int ret = sws_scale(d.sws_ctx, (const uint8_t* const*)in_frame->data, in_frame->linesize, 0, in_frame->height, out_frame->data, out_frame->linesize);
+    int ret = sws_scale(d.sws_ctx, (const uint8_t* const*)in->data, in->linesize, 0, in->height, out_frame->data, out_frame->linesize);
     if(ret < 0){
         // convert error, try next frame
         av_log(NULL, AV_LOG_ERROR, "fail scale video");
@@ -718,9 +721,7 @@ static int rescale_video_frame(AVFrame **frame, VideoState *is){
         return -1;
     }
     
-    av_frame_free(frame);
-    *frame = out_frame;
-    
+    *out = out_frame;
     return 0;
 }
 
@@ -787,9 +788,13 @@ void * audio_decode_func (void *ptr){
             
             ///存在音频重采样器，则进行重采样
             if(is->auddec.swr_ctx){
-                if (resample_audio_frame(&frame, is)) {
+                AVFrame *out = NULL;
+                if (resample_audio_frame(frame ,&out, is)) {
                     av_frame_free(&frame);
                     break;
+                } else {
+                    av_frame_free(&frame);
+                    frame = out;
                 }
             }
             
@@ -816,20 +821,30 @@ void * audio_decode_func (void *ptr){
 
 void * video_decode_func (void *ptr){
     VideoState *is = ptr;
-    AVFrame *frame = av_frame_alloc();
-    if (!frame) {
-        av_log(NULL, AV_LOG_ERROR, "can't alloc a frame.");
-        return NULL;
-    }
     int got_frame = 0;
+    
     do {
+        AVFrame *frame = av_frame_alloc();
+        if (!frame) {
+            av_log(NULL, AV_LOG_ERROR, "can't alloc a frame.");
+            return NULL;
+        }
+        
         got_frame = decoder_decode_frame(&is->viddec, frame);
         
         ///存在视频转换器，则进行格式转换
         if(is->viddec.sws_ctx){
-            if (rescale_video_frame(&frame, is)) {
+            AVFrame *out = NULL;
+            if (rescale_video_frame(frame, &out, is)) {
                 av_frame_free(&frame);
                 break;
+            } else {
+                av_frame_free(&frame);
+                //!important: fix memory leak.
+                //frame = out;
+                frame = av_frame_clone(out);
+                av_freep(out->data);
+                av_frame_free(&out);
             }
         }
         
@@ -1242,15 +1257,15 @@ static void video_refresh(VideoState *is,double *remaining_time){
         return;
     }
     
-    if (is->display_func) {
-        is->display_func(is->display_func_ctx,af->frame);
-    }
-    
     const double frameDuration = av_frame_get_pkt_duration(af->frame) * 0.00004;
     DEBUGLog("display frame:%g\n",frameDuration);
     
     // retain new pic.
-    av_frame_move_ref(is->dispalying, af->frame);
+    av_frame_ref(is->dispalying, af->frame);
+    
+    if (is->display_func) {
+        is->display_func(is->display_func_ctx,af->frame);
+    }
     
     frame_queue_next(&is->pictq);
     

@@ -362,6 +362,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "cn.debugly.MRMoviePlayer-Example";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
+				VALID_ARCHS = arm64;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -379,6 +380,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "cn.debugly.MRMoviePlayer-Example";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
+				VALID_ARCHS = arm64;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
