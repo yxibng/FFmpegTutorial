@@ -400,6 +400,7 @@ typedef struct VideoState {
     FrameQueue sampq;
     FrameQueue pictq;
     
+    bool pause;
 }VideoState;
 
 static void msg_post (VideoState *is, MR_Msg_Type type);
@@ -871,7 +872,7 @@ static void decoder_init(Decoder *d, PacketQueue *queue, AVCodecContext *avctx, 
     memset(d, 0, sizeof(Decoder));
     d->avctx = avctx;
     d->queue = queue;
-    d->name = av_strdup(name);
+    d->name  = av_strdup(name);
 }
 
 #pragma mark -
@@ -1152,6 +1153,10 @@ int mr_fetch_packet_sample(MRPlayer opaque, uint8_t *buffer, int want){
     
     assert(!av_sample_fmt_is_planar(is->auddec.target_sample_format));
     
+    if (is->pause) {
+        return 0;
+    }
+    
     DEBUGLog("want sample size:%d\n",want);
     
     while (want > 0) {
@@ -1197,6 +1202,10 @@ int mr_fetch_planar_sample(MRPlayer opaque, uint8_t *l_buffer, int l_size, uint8
     
     assert(av_sample_fmt_is_planar(is->auddec.target_sample_format));
     
+    if (is->pause) {
+        return 0;
+    }
+    
     DEBUGLog("want planar sample size:%d\n",l_size);
     
     while (l_size > 0 || r_size > 0) {
@@ -1204,6 +1213,8 @@ int mr_fetch_planar_sample(MRPlayer opaque, uint8_t *l_buffer, int l_size, uint8
         if (!(af = frame_queue_peek_readable(&is->sampq))){
             return 0;
         }
+        
+        DEBUGLog("display frame 2:%lld\n",af->frame->pts);
         
         uint8_t *l_src = af->frame->data[0];
         
@@ -1216,9 +1227,6 @@ int mr_fetch_planar_sample(MRPlayer opaque, uint8_t *l_buffer, int l_size, uint8
         ///根据剩余数据长度和需要数据长度算出应当copy的长度
         int leftBytesToCopy = FFMIN(l_size, leftBytesLeft);
         
-        if (leftBytesToCopy == 0) {
-            
-        }
         memcpy(l_buffer, leftFrom, leftBytesToCopy);
         l_buffer += leftBytesToCopy;
         l_size -= leftBytesToCopy;
@@ -1258,7 +1266,7 @@ static void video_refresh(VideoState *is,double *remaining_time){
     }
     
     const double frameDuration = av_frame_get_pkt_duration(af->frame) * 0.00004;
-    DEBUGLog("display frame:%g\n",frameDuration);
+    DEBUGLog("display frame:%lld\n",af->frame->pts);
     
     // retain new pic.
     av_frame_ref(is->dispalying, af->frame);
@@ -1282,7 +1290,9 @@ static void *video_refresh_thread(void *ptr){
         if (remaining_time > 0.0)
             av_usleep((int)(int64_t)(remaining_time * 1000000.0));
         remaining_time = REFRESH_RATE;
-
+        if (is->pause) {
+            continue;
+        }
         video_refresh(is, &remaining_time);
     }
     return NULL;
@@ -1366,15 +1376,29 @@ int mr_prepare_play(MRPlayer opaque){
     return 0;
 }
 
+int mr_play(MRPlayer opaque){
+    assert(opaque);
+    VideoState *is = opaque;
+    is->pause = false;
+    return 0;
+}
+
+int mr_pause(MRPlayer opaque){
+    assert(opaque);
+    VideoState *is = opaque;
+    is->pause = true;
+    return 0;
+}
+
 #pragma mark -
 #pragma mark - 设置视频渲染回调方法
 
-int mr_set_display_func(MRPlayer opaque, void *context, DisplayFunc func){
+int mr_set_display_func(MRPlayer opaque, void *context, DisplayFunc func) {
     assert(opaque);
-    VideoState *vs = opaque;
+    VideoState *is = opaque;
 #warning need lock here!
-    vs->display_func = func;
-    vs->display_func_ctx = context;
+    is->display_func = func;
+    is->display_func_ctx = context;
     return 0;
 }
 

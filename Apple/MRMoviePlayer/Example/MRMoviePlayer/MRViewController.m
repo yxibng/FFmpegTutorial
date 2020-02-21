@@ -14,6 +14,8 @@
 #import "MRConvertUtil.h"
 
 @interface MRViewController ()
+@property (weak, nonatomic) IBOutlet UIButton *palyBtn;
+@property (weak, nonatomic) IBOutlet UIActivityIndicatorView *indicator;
 
 //采样率
 @property (nonatomic,assign) double targetSampleRate;
@@ -78,7 +80,7 @@ static void msgFunc (void *context,MR_Msg *msg){
         self.renderView.frame = self.view.bounds;
         self.renderView.contentMode = UIViewContentModeScaleAspectFit;
         self.renderView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        [self.view addSubview:self.renderView];
+        [self.view insertSubview:self.renderView atIndex:0];
     }
 }
 
@@ -184,17 +186,7 @@ static void msgFunc (void *context,MR_Msg *msg){
 #undef kInputBus
         
         self.targetSampleFormat = targetSampleFormat;
-        
     }
-    
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        OSStatus status = AudioOutputUnitStart(_audioUnit);
-        if(noErr == status){
-
-        }
-        NSAssert(noErr == status, @"AudioOutputUnitStart");
-    });
-    
 }
 
 #pragma mark - 音频
@@ -332,14 +324,25 @@ static inline OSStatus MRRenderCallback(void *inRefCon,
     
     MRPlayer player = mr_player_instance_create(params);
     mr_set_display_func(player,(__bridge void *)self, displayFunc);
+    ///默认暂停
+    mr_pause(player);
     mr_prepare_play(player);
     self.player = player;
 }
 
-- (void)didReceiveMemoryWarning
-{
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
+- (IBAction)onPlayOrPause:(UIButton *)sender {
+    
+    [sender setSelected:!sender.isSelected];
+    
+    if (sender.isSelected) {
+        mr_play(self.player);
+        OSStatus status = AudioOutputUnitStart(_audioUnit);
+        NSAssert(noErr == status, @"AudioOutputUnitStart");
+    } else {
+        mr_pause(self.player);
+        OSStatus status = AudioOutputUnitStop(_audioUnit);
+        NSAssert(noErr == status, @"AudioOutputUnitStart");
+    }
 }
 
 @end
