@@ -61,6 +61,8 @@ static void msgFunc (void *context,MR_Msg *msg){
             int width  = msg->arg1;
             int height = msg->arg2;
             
+            mr_set_display_func(vc.player,(__bridge void *)vc, displayFunc);
+            
             dispatch_async(dispatch_get_main_queue(), ^{
                 [vc setupVideoRender:width height:height];
             });
@@ -323,7 +325,6 @@ static inline OSStatus MRRenderCallback(void *inRefCon,
     params->supported_pixel_fmts = MR_PIX_FMT_NV12;//MR_PIX_FMT_YUV420P;//
     
     MRPlayer player = mr_player_instance_create(params);
-    mr_set_display_func(player,(__bridge void *)self, displayFunc);
     ///默认暂停
     mr_pause(player);
     mr_prepare_play(player);
@@ -331,6 +332,10 @@ static inline OSStatus MRRenderCallback(void *inRefCon,
 }
 
 - (IBAction)onPlayOrPause:(UIButton *)sender {
+    
+    if (!_audioUnit) {
+        return;
+    }
     
     [sender setSelected:!sender.isSelected];
     

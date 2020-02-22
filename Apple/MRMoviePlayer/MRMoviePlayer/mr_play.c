@@ -22,8 +22,8 @@
 #include <libavutil/imgutils.h>
 
 #define MIN_PKT_DURATION 15
-#define MAX_QUEUE_SIZE (15 * 1024 * 1024)
-#define MAX_PACKET_COUNT  500
+#define MAX_QUEUE_SIZE (50 * 1024 * 1024) ///需要考虑该如何分配packet queue大小问题，
+#define MAX_PACKET_COUNT 500
 #define FRAME_QUEUE_SIZE 16
 #define REFRESH_RATE 0.01
 
@@ -236,6 +236,8 @@ typedef struct Decoder {
     int pic_width,pic_height;
     enum AVPixelFormat target_pixel_format;
     struct SwsContext *sws_ctx;
+    float time_base;
+    float fps;
 }Decoder;
 
 typedef struct Frame {
@@ -248,8 +250,6 @@ typedef struct Frame {
     int width;
     int height;
     int format;
-    AVRational sar;
-    int uploaded;
     
     int left_offset;
     int right_offset;
@@ -348,14 +348,18 @@ static void frame_queue_next(FrameQueue *f)
     pthread_mutex_unlock(&f->mutex);
 }
 
-static Frame *frame_queue_peek_readable(FrameQueue *f)
+static Frame *frame_queue_peek_readable(FrameQueue *f, int block)
 {
     /* wait until we have a readable a new frame */
     pthread_mutex_lock(&f->mutex);
-    while (f->size <= 0 &&
-           !f->pktq->abort_request) {
+    while (f->size <= 0 && !f->pktq->abort_request) {
         DEBUGLog("%s frame queue is empty\n",f->name);
-        pthread_cond_wait(&f->cond, &f->mutex);
+        if (block) {
+            pthread_cond_wait(&f->cond, &f->mutex);
+        } else {
+            pthread_mutex_unlock(&f->mutex);
+            return NULL;
+        }
     }
     pthread_mutex_unlock(&f->mutex);
 
@@ -607,6 +611,9 @@ static int resample_audio_frame(AVFrame *in, AVFrame **out, VideoState *is){
     //av_opt_get_int(d.swr_ctx, "out_channel_layout", 0, &dst_ch_layout);
     
     AVFrame *out_frame = av_frame_alloc();
+    ///important！
+    av_frame_copy_props(out_frame, in);
+    
     out_frame->channel_layout = in->channel_layout;
     out_frame->sample_rate = dst_rate;
     out_frame->format = dst_sample_fmt;
@@ -690,7 +697,7 @@ static int create_sws_ctx_ifneed(VideoState *is,Decoder *decoder){
         enum AVPixelFormat src_pix_fmt = decoder->avctx->pix_fmt;
         enum AVPixelFormat dst_pix_fmt = decoder->target_pixel_format;
         
-        decoder->sws_ctx = sws_getContext(decoder->pic_width, decoder->pic_height, src_pix_fmt, decoder->pic_width, decoder->pic_height, dst_pix_fmt, SWS_BICUBIC, NULL, NULL, NULL);
+        decoder->sws_ctx = sws_getContext(decoder->pic_width, decoder->pic_height, src_pix_fmt, decoder->pic_width, decoder->pic_height, dst_pix_fmt, SWS_POINT, NULL, NULL, NULL);
         
         if (NULL == decoder->sws_ctx) {
             return -1;
@@ -699,8 +706,6 @@ static int create_sws_ctx_ifneed(VideoState *is,Decoder *decoder){
     return 0;
 }
 
-#warning todo memory leak.
-
 static int rescale_video_frame(AVFrame *in, AVFrame **out, VideoState *is){
     
     assert(out);
@@ -708,6 +713,9 @@ static int rescale_video_frame(AVFrame *in, AVFrame **out, VideoState *is){
     Decoder d = is->viddec;
     
     AVFrame *out_frame = av_frame_alloc();
+    ///important！
+    av_frame_copy_props(out_frame, in);
+    
     out_frame->format  = d.target_pixel_format;
     out_frame->width   = d.pic_width;
     out_frame->height  = d.pic_height;
@@ -868,6 +876,31 @@ void * video_decode_func (void *ptr){
 
 #pragma mark 解码结构初始化方法
 
+static void avStreamFPSTimeBase(AVStream *st, float defaultTimeBase, float *pFPS, float *pTimeBase)
+{
+    float fps, timebase;
+    
+    if (st->time_base.den && st->time_base.num)
+        timebase = av_q2d(st->time_base);
+//    else if(st->codec->time_base.den && st->codec->time_base.num)
+    else if(st->time_base.den && st->time_base.num)
+        timebase = av_q2d(st->time_base);
+    else
+        timebase = defaultTimeBase;
+    
+    if (st->avg_frame_rate.den && st->avg_frame_rate.num)
+        fps = av_q2d(st->avg_frame_rate);
+    else if (st->r_frame_rate.den && st->r_frame_rate.num)
+        fps = av_q2d(st->r_frame_rate);
+    else
+        fps = 1.0 / timebase;
+    
+    if (pFPS)
+        *pFPS = fps;
+    if (pTimeBase)
+        *pTimeBase = timebase;
+}
+
 static void decoder_init(Decoder *d, PacketQueue *queue, AVCodecContext *avctx, const char *name){
     memset(d, 0, sizeof(Decoder));
     d->avctx = avctx;
@@ -966,6 +999,8 @@ static int stream_component_open(VideoState *is, int stream_index){
             is->viddec.pic_width = avctx->width;
             ///画面高度，单位像素
             is->viddec.pic_height = avctx->height;
+            
+            avStreamFPSTimeBase(stream, 0.04, &is->viddec.fps, &is->viddec.time_base);
             
             if (create_sws_ctx_ifneed(is, &is->viddec)) {
                 avcodec_free_context(&avctx);
@@ -1161,7 +1196,7 @@ int mr_fetch_packet_sample(MRPlayer opaque, uint8_t *buffer, int want){
     
     while (want > 0) {
         Frame *af;
-        if (!(af = frame_queue_peek_readable(&is->sampq))){
+        if (!(af = frame_queue_peek_readable(&is->sampq, 0))){
             return 0;
         }
         
@@ -1210,11 +1245,11 @@ int mr_fetch_planar_sample(MRPlayer opaque, uint8_t *l_buffer, int l_size, uint8
     
     while (l_size > 0 || r_size > 0) {
         Frame *af;
-        if (!(af = frame_queue_peek_readable(&is->sampq))){
+        if (!(af = frame_queue_peek_readable(&is->sampq, 0))){
             return 0;
         }
         
-        DEBUGLog("display frame 2:%lld\n",af->frame->pts);
+//        DEBUGLog("display frame 2:%lld\n",af->frame->pts);
         
         uint8_t *l_src = af->frame->data[0];
         
@@ -1257,17 +1292,23 @@ int mr_fetch_planar_sample(MRPlayer opaque, uint8_t *l_buffer, int l_size, uint8
 }
 
 static void video_refresh(VideoState *is,double *remaining_time){
-    //release old pic
-    av_frame_unref(is->dispalying);
     
     Frame *af;
-    if (!(af = frame_queue_peek_readable(&is->pictq))){
+    if (!(af = frame_queue_peek_readable(&is->pictq, 0))){
         return;
     }
     
-    const double frameDuration = av_frame_get_pkt_duration(af->frame) * 0.00004;
-    DEBUGLog("display frame:%lld\n",af->frame->pts);
-    
+    double frameDuration = av_frame_get_pkt_duration(af->frame);
+    if (frameDuration * 100 == 0) {
+        frameDuration = 1 / is->viddec.fps;
+    } else {
+        frameDuration = frameDuration * is->viddec.time_base;
+        frameDuration += af->frame->repeat_pict / (2*is->viddec.fps);
+    }
+//    DEBUGLog("display frame:%lld\n",af->frame->pts);
+//    DEBUGLog("display frame:%g\n",frameDuration);
+    //release old pic
+    av_frame_unref(is->dispalying);
     // retain new pic.
     av_frame_ref(is->dispalying, af->frame);
     
@@ -1277,7 +1318,7 @@ static void video_refresh(VideoState *is,double *remaining_time){
     
     frame_queue_next(&is->pictq);
     
-    *remaining_time = 10*frameDuration;
+    *remaining_time = frameDuration;
 }
 
 #pragma mark -
@@ -1345,7 +1386,7 @@ int mr_prepare_play(MRPlayer opaque){
     
     is->dispalying = av_frame_alloc();
     
-    if (frame_queue_init(&is->sampq, &is->audioq, 6, 1, "audio") || frame_queue_init(&is->pictq, &is->videoq, 3, 1, "video")){
+    if (frame_queue_init(&is->sampq, &is->audioq, 9, 1, "audio") || frame_queue_init(&is->pictq, &is->videoq, 3, 1, "video")){
         av_freep(is);
         return -1;
     }
@@ -1378,6 +1419,7 @@ int mr_prepare_play(MRPlayer opaque){
 
 int mr_play(MRPlayer opaque){
     assert(opaque);
+    INFO("mr_play\n");
     VideoState *is = opaque;
     is->pause = false;
     return 0;
@@ -1385,6 +1427,7 @@ int mr_play(MRPlayer opaque){
 
 int mr_pause(MRPlayer opaque){
     assert(opaque);
+    INFO("mr_pause\n");
     VideoState *is = opaque;
     is->pause = true;
     return 0;
