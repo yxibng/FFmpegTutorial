@@ -245,8 +245,6 @@ typedef struct Frame {
     int serial;
     double pts;           /* presentation timestamp for the frame */
     double duration;      /* estimated duration of the frame */
-    int64_t pos;          /* byte position of the frame in the input file */
-    int allocated;
     int width;
     int height;
     int format;
@@ -796,7 +794,7 @@ void * audio_decode_func (void *ptr){
         if (got_frame >= 0) {
             
             ///存在音频重采样器，则进行重采样
-            if(is->auddec.swr_ctx){
+            if(is->auddec.swr_ctx) {
                 AVFrame *out = NULL;
                 if (resample_audio_frame(frame ,&out, is)) {
                     av_frame_free(&frame);
@@ -808,12 +806,16 @@ void * audio_decode_func (void *ptr){
             }
             
             Frame *af = NULL;
-            if (NULL == (af = frame_queue_peek_writable(&is->sampq))){
+            if (NULL == (af = frame_queue_peek_writable(&is->sampq))) {
                 av_frame_free(&frame);
                 break;
             }
             is->sampq.serial++;
             af->serial = is->sampq.serial;
+            if (frame->pts != AV_NOPTS_VALUE) {
+                af->pts = is->auddec.time_base * frame->pts;
+            }
+            
             av_frame_move_ref(af->frame, frame);
             frame_queue_push(&is->sampq);
         } else {
@@ -862,6 +864,20 @@ void * video_decode_func (void *ptr){
             av_frame_free(&frame);
             break;
         }
+        
+        if (frame->pts != AV_NOPTS_VALUE) {
+            af->pts = is->viddec.time_base * frame->pts;
+        }
+        
+        double duration = av_frame_get_pkt_duration(frame);
+        if ((int)(duration * 1000) == 0) {
+            duration = 1 / is->viddec.fps;
+        } else {
+            duration = duration * is->viddec.time_base;
+            duration += af->frame->repeat_pict / (2 * is->viddec.fps);
+        }
+        
+        af->duration = duration;
         is->pictq.serial++;
         af->serial = is->pictq.serial;
         av_frame_move_ref(af->frame, frame);
@@ -876,30 +892,40 @@ void * video_decode_func (void *ptr){
 
 #pragma mark 解码结构初始化方法
 
-static void avStreamFPSTimeBase(AVStream *st, float defaultTimeBase, float *pFPS, float *pTimeBase)
+static void avStreamTimeBase(AVRational st_time_base, AVRational codec_time_base, float defaultTimeBase, float *pTimeBase)
 {
-    float fps, timebase;
+    float timebase;
     
-    if (st->time_base.den && st->time_base.num)
-        timebase = av_q2d(st->time_base);
-//    else if(st->codec->time_base.den && st->codec->time_base.num)
-    else if(st->time_base.den && st->time_base.num)
-        timebase = av_q2d(st->time_base);
+    if (st_time_base.den && st_time_base.num)
+        timebase = av_q2d(st_time_base);
+    else if(codec_time_base.den && codec_time_base.num)
+        timebase = av_q2d(codec_time_base);
     else
         timebase = defaultTimeBase;
+    
+    if (pTimeBase)
+        *pTimeBase = timebase;
+}
+
+static void fpsForVideoStream(AVStream * st, float time_base, float *pFPS)
+{
+    if (AVMEDIA_TYPE_VIDEO != st->codecpar->codec_type) {
+        assert(1);
+    }
+    
+    float fps;
     
     if (st->avg_frame_rate.den && st->avg_frame_rate.num)
         fps = av_q2d(st->avg_frame_rate);
     else if (st->r_frame_rate.den && st->r_frame_rate.num)
         fps = av_q2d(st->r_frame_rate);
     else
-        fps = 1.0 / timebase;
-    
+        fps = 1.0 / time_base;
+
     if (pFPS)
         *pFPS = fps;
-    if (pTimeBase)
-        *pTimeBase = timebase;
 }
+
 
 static void decoder_init(Decoder *d, PacketQueue *queue, AVCodecContext *avctx, const char *name){
     memset(d, 0, sizeof(Decoder));
@@ -973,6 +999,8 @@ static int stream_component_open(VideoState *is, int stream_index){
             is->audio_st = stream;
             decoder_init(&is->auddec, &is->audioq, avctx, "audio_decode");
             
+            avStreamTimeBase(stream->time_base, is->auddec.avctx->time_base, 0.025, &is->auddec.time_base);
+            
             if (create_swr_ctx_ifneed(is, &is->auddec)) {
                 avcodec_free_context(&avctx);
                 av_log(NULL, AV_LOG_ERROR, "can't create_swr_ctx");
@@ -1000,7 +1028,8 @@ static int stream_component_open(VideoState *is, int stream_index){
             ///画面高度，单位像素
             is->viddec.pic_height = avctx->height;
             
-            avStreamFPSTimeBase(stream, 0.04, &is->viddec.fps, &is->viddec.time_base);
+            avStreamTimeBase(stream->time_base, is->viddec.avctx->time_base, 0.04, &is->viddec.time_base);
+            fpsForVideoStream(stream, is->viddec.time_base, &is->viddec.fps);
             
             if (create_sws_ctx_ifneed(is, &is->viddec)) {
                 avcodec_free_context(&avctx);
@@ -1200,6 +1229,9 @@ int mr_fetch_packet_sample(MRPlayer opaque, uint8_t *buffer, int want){
             return 0;
         }
         
+        if (af->left_offset == 0) {
+            DEBUGLog("audio frame pts:%.2f\n",af->pts);
+        }
         uint8_t *src = af->frame->data[0];
         
         int data_size = av_samples_get_buffer_size(af->frame->linesize, 2, af->frame->nb_samples, is->auddec.target_sample_format, 1);
@@ -1249,7 +1281,9 @@ int mr_fetch_planar_sample(MRPlayer opaque, uint8_t *l_buffer, int l_size, uint8
             return 0;
         }
         
-//        DEBUGLog("display frame 2:%lld\n",af->frame->pts);
+        if (af->left_offset == 0) {
+            DEBUGLog("audio frame pts:%.2f\n",af->pts);
+        }
         
         uint8_t *l_src = af->frame->data[0];
         
@@ -1297,16 +1331,10 @@ static void video_refresh(VideoState *is,double *remaining_time){
     if (!(af = frame_queue_peek_readable(&is->pictq, 0))){
         return;
     }
+    double duration = af->duration;
+    DEBUGLog("video frame pts:%.2f\n",af->pts);
+    //    DEBUGLog("display frame:%g\n",duration);
     
-    double frameDuration = av_frame_get_pkt_duration(af->frame);
-    if (frameDuration * 100 == 0) {
-        frameDuration = 1 / is->viddec.fps;
-    } else {
-        frameDuration = frameDuration * is->viddec.time_base;
-        frameDuration += af->frame->repeat_pict / (2*is->viddec.fps);
-    }
-//    DEBUGLog("display frame:%lld\n",af->frame->pts);
-//    DEBUGLog("display frame:%g\n",frameDuration);
     //release old pic
     av_frame_unref(is->dispalying);
     // retain new pic.
@@ -1318,7 +1346,7 @@ static void video_refresh(VideoState *is,double *remaining_time){
     
     frame_queue_next(&is->pictq);
     
-    *remaining_time = frameDuration;
+    *remaining_time = duration;
 }
 
 #pragma mark -
