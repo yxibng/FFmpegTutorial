@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		35A4F7988DFD63034AD9DF82 /* libPods-MRStreamProber.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B2F039BA1C75706E654C1642 /* libPods-MRStreamProber.a */; };
+		31CE082B969973374D17D21E /* Pods_MRStreamProber.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C0F6C32C0C873E5123E3F50 /* Pods_MRStreamProber.framework */; };
 		DD1D61CF23D4504D0032BDA6 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = DD1D61CE23D4504D0032BDA6 /* AppDelegate.m */; };
 		DD1D61D223D4504D0032BDA6 /* SceneDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = DD1D61D123D4504D0032BDA6 /* SceneDelegate.m */; };
 		DD1D61D823D4504D0032BDA6 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = DD1D61D623D4504D0032BDA6 /* Main.storyboard */; };
@@ -20,7 +20,7 @@
 
 /* Begin PBXFileReference section */
 		5C33647D7059EB744FB1908C /* Pods-MRStreamProber.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MRStreamProber.release.xcconfig"; path = "Target Support Files/Pods-MRStreamProber/Pods-MRStreamProber.release.xcconfig"; sourceTree = "<group>"; };
-		B2F039BA1C75706E654C1642 /* libPods-MRStreamProber.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MRStreamProber.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9C0F6C32C0C873E5123E3F50 /* Pods_MRStreamProber.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MRStreamProber.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD1D61CA23D4504D0032BDA6 /* MRStreamProber.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MRStreamProber.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD1D61CD23D4504D0032BDA6 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		DD1D61CE23D4504D0032BDA6 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -43,7 +43,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				35A4F7988DFD63034AD9DF82 /* libPods-MRStreamProber.a in Frameworks */,
+				31CE082B969973374D17D21E /* Pods_MRStreamProber.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,7 +53,7 @@
 		011371C3532D3C725F8A0D88 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				B2F039BA1C75706E654C1642 /* libPods-MRStreamProber.a */,
+				9C0F6C32C0C873E5123E3F50 /* Pods_MRStreamProber.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -346,7 +346,6 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = F984151CF2CB7E1085F309FF /* Pods-MRStreamProber.debug.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = MRStreamProber/Info.plist;
@@ -366,7 +365,6 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 5C33647D7059EB744FB1908C /* Pods-MRStreamProber.release.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = MRStreamProber/Info.plist;

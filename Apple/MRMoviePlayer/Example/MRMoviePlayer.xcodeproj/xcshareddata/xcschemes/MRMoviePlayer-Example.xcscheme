@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "6003F589195388D20070C39A"
-               BuildableName = "MRMoviePlayer_Example.app"
+               BuildableName = "MRMoviePlayer.app"
                BlueprintName = "MRMoviePlayer_Example"
                ReferencedContainer = "container:MRMoviePlayer.xcodeproj">
             </BuildableReference>
@@ -31,7 +31,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "6003F589195388D20070C39A"
-            BuildableName = "MRMoviePlayer_Example.app"
+            BuildableName = "MRMoviePlayer.app"
             BlueprintName = "MRMoviePlayer_Example"
             ReferencedContainer = "container:MRMoviePlayer.xcodeproj">
          </BuildableReference>
@@ -64,7 +64,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "6003F589195388D20070C39A"
-            BuildableName = "MRMoviePlayer_Example.app"
+            BuildableName = "MRMoviePlayer.app"
             BlueprintName = "MRMoviePlayer_Example"
             ReferencedContainer = "container:MRMoviePlayer.xcodeproj">
          </BuildableReference>
@@ -81,7 +81,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "6003F589195388D20070C39A"
-            BuildableName = "MRMoviePlayer_Example.app"
+            BuildableName = "MRMoviePlayer.app"
             BlueprintName = "MRMoviePlayer_Example"
             ReferencedContainer = "container:MRMoviePlayer.xcodeproj">
          </BuildableReference>

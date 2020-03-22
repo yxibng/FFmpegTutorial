@@ -15,9 +15,9 @@
 		6003F59E195388D20070C39A /* MRAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 6003F59D195388D20070C39A /* MRAppDelegate.m */; };
 		6003F5A7195388D20070C39A /* MRViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6003F5A6195388D20070C39A /* MRViewController.m */; };
 		6003F5A9195388D20070C39A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6003F5A8195388D20070C39A /* Images.xcassets */; };
-		707057BEFCAF18CA0A8B715C /* libPods-MRMoviePlayer_Example.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 96FE0240EE649B093E9F024E /* libPods-MRMoviePlayer_Example.a */; };
 		71719F9F1E33DC2100824A3D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 71719F9D1E33DC2100824A3D /* LaunchScreen.storyboard */; };
 		873B8AEB1B1F5CCA007FD442 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 873B8AEA1B1F5CCA007FD442 /* Main.storyboard */; };
+		A8BAD9570F51C5D5B8E47672 /* Pods_MRMoviePlayer_Example.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 35B31F3012C1C99C14132409 /* Pods_MRMoviePlayer_Example.framework */; };
 		DDB0CA5623EC367E009CFFD7 /* MRVideoRenderView.m in Sources */ = {isa = PBXBuildFile; fileRef = DDB0CA5323EC367E009CFFD7 /* MRVideoRenderView.m */; };
 		DDB0CA5723EC367E009CFFD7 /* MRConvertUtil.m in Sources */ = {isa = PBXBuildFile; fileRef = DDB0CA5523EC367E009CFFD7 /* MRConvertUtil.m */; };
 /* End PBXBuildFile section */
@@ -25,6 +25,7 @@
 /* Begin PBXFileReference section */
 		0C98693B5543120CD22ED026 /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
 		104F34DE45DEA3D901AE3D73 /* Pods-MRMoviePlayer_Example.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MRMoviePlayer_Example.release.xcconfig"; path = "Target Support Files/Pods-MRMoviePlayer_Example/Pods-MRMoviePlayer_Example.release.xcconfig"; sourceTree = "<group>"; };
+		35B31F3012C1C99C14132409 /* Pods_MRMoviePlayer_Example.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MRMoviePlayer_Example.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		3E52CDCD5C2975F46F6ACC24 /* Pods-MRMoviePlayer_Example.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MRMoviePlayer_Example.debug.xcconfig"; path = "Target Support Files/Pods-MRMoviePlayer_Example/Pods-MRMoviePlayer_Example.debug.xcconfig"; sourceTree = "<group>"; };
 		4607F56B5A0E85AF0AE504BB /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 		6003F58A195388D20070C39A /* MRMoviePlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MRMoviePlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -43,7 +44,6 @@
 		6003F5AF195388D20070C39A /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 		71719F9E1E33DC2100824A3D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		873B8AEA1B1F5CCA007FD442 /* Main.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = Main.storyboard; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		96FE0240EE649B093E9F024E /* libPods-MRMoviePlayer_Example.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MRMoviePlayer_Example.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A6905B892D973CD6738B575E /* MRMoviePlayer.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = MRMoviePlayer.podspec; path = ../MRMoviePlayer.podspec; sourceTree = "<group>"; };
 		DDB0CA5223EC367E009CFFD7 /* MRVideoRenderView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MRVideoRenderView.h; sourceTree = "<group>"; };
 		DDB0CA5323EC367E009CFFD7 /* MRVideoRenderView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MRVideoRenderView.m; sourceTree = "<group>"; };
@@ -59,7 +59,7 @@
 				6003F590195388D20070C39A /* CoreGraphics.framework in Frameworks */,
 				6003F592195388D20070C39A /* UIKit.framework in Frameworks */,
 				6003F58E195388D20070C39A /* Foundation.framework in Frameworks */,
-				707057BEFCAF18CA0A8B715C /* libPods-MRMoviePlayer_Example.a in Frameworks */,
+				A8BAD9570F51C5D5B8E47672 /* Pods_MRMoviePlayer_Example.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -101,7 +101,7 @@
 				6003F58F195388D20070C39A /* CoreGraphics.framework */,
 				6003F591195388D20070C39A /* UIKit.framework */,
 				6003F5AF195388D20070C39A /* XCTest.framework */,
-				96FE0240EE649B093E9F024E /* libPods-MRMoviePlayer_Example.a */,
+				35B31F3012C1C99C14132409 /* Pods_MRMoviePlayer_Example.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";

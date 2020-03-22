@@ -27,7 +27,9 @@ TODO: Add long description of the pod here.
   s.author           = { 'qianlongxu' => 'summerhanada@163.com' }
   s.source           = { :git => 'https://github.com/qianlongxu/MRMoviePlayer.git', :tag => s.version.to_s }
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
-
+  
+  # dependencies that include statically linked binaries.
+  s.static_framework = true
   s.ios.deployment_target = '8.0'
 
   s.source_files = 'MRMoviePlayer/**/*'
