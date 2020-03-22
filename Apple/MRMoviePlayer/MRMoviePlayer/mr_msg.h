@@ -13,6 +13,8 @@
 typedef enum MR_Msg_Type {
     MR_Msg_Type_InitVideoRender = 1,///可以初始化视频渲染
     MR_Msg_Type_InitAudioRender = 2,///可以初始化视频渲染
+    MR_Msg_Type_PackQueueIsFull = 3,///未解码包队列已满
+    MR_Msg_Type_FrameQueueIsEmpty = 4,///已解码队列空，音频或视频
 } MR_Msg_Type;
 
 typedef struct MR_Msg{

@@ -44,7 +44,7 @@
 		6003F5AF195388D20070C39A /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 		71719F9E1E33DC2100824A3D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		873B8AEA1B1F5CCA007FD442 /* Main.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = Main.storyboard; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		A6905B892D973CD6738B575E /* MRMoviePlayer.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = MRMoviePlayer.podspec; path = ../MRMoviePlayer.podspec; sourceTree = "<group>"; };
+		A6905B892D973CD6738B575E /* MRMoviePlayer.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = MRMoviePlayer.podspec; path = ../MRMoviePlayer.podspec; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
 		DDB0CA5223EC367E009CFFD7 /* MRVideoRenderView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MRVideoRenderView.h; sourceTree = "<group>"; };
 		DDB0CA5323EC367E009CFFD7 /* MRVideoRenderView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MRVideoRenderView.m; sourceTree = "<group>"; };
 		DDB0CA5423EC367E009CFFD7 /* MRConvertUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MRConvertUtil.h; sourceTree = "<group>"; };

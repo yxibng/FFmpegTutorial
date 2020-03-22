@@ -68,6 +68,19 @@ static void msgFunc (void *context,MR_Msg *msg){
             });
         }
             break;
+        case MR_Msg_Type_FrameQueueIsEmpty:
+        {
+//            printf("m:FrameQueueIsEmpty");
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [vc onPlayOrPause:vc.palyBtn];
+            });
+        }
+            break;
+        case MR_Msg_Type_PackQueueIsFull:
+        {
+//            printf("m:PackQueueIsFull");
+        }
+            break;
     }
 }
 

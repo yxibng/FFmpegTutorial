@@ -9,10 +9,9 @@
 #define mr_play_h
 
 #include <stdio.h>
-#include <libavutil/frame.h>
 #include "mr_msg.h"
 
-typedef int (*DisplayFunc)(void *, AVFrame *);
+typedef int (*DisplayFunc)(void *, void *); //(void *, AVFrame *)
 typedef void(*MsgFunc)(void *, MR_Msg *);
 typedef void * MRPlayer;
 

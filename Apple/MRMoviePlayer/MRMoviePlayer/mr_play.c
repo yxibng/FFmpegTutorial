@@ -20,12 +20,21 @@
 #include <libavutil/opt.h>
 #include <libswscale/swscale.h>
 #include <libavutil/imgutils.h>
+#include <libavutil/frame.h>
 
 #define MIN_PKT_DURATION 15
 #define MAX_QUEUE_SIZE (50 * 1024 * 1024) ///需要考虑该如何分配packet queue大小问题，
 #define MAX_PACKET_COUNT 500
 #define FRAME_QUEUE_SIZE 16
 #define REFRESH_RATE 0.01
+#define AV_SYNC_THRESHOLD_MIN 0.04
+/* AV sync correction is done if above the maximum AV sync threshold */
+#define AV_SYNC_THRESHOLD_MAX 0.1
+/* If a frame duration is longer than this, it will not be duplicated to compensate AV sync */
+#define AV_SYNC_FRAMEDUP_THRESHOLD 0.1
+/* no AV correction is done if too big error */
+#define AV_NOSYNC_THRESHOLD 10.0
+
 
 void mrlog(const char * f, ...){
     va_list args;       //定义一个va_list类型的变量，用来储存单个参数
@@ -48,6 +57,38 @@ void mrlog(const char * f, ...){
     mrlog(__VA_ARGS__);  \
 } while (0)
 
+typedef struct Clock {
+    double pts;           /* clock base */
+    double pts_drift;     /* clock base minus time at which we updated the clock */
+    double last_updated;
+    double speed;
+    int serial;           /* clock is based on a packet with this serial */
+    int paused;
+    int *queue_serial;    /* pointer to the current packet queue serial, used for obsolete clock detection */
+
+} Clock;
+
+static void set_clock_at(Clock *c, double pts, int serial, double time)
+{
+    c->pts = pts;
+    c->last_updated = time;
+    c->pts_drift = c->pts - time;
+    c->serial = serial;
+}
+
+static void set_clock(Clock *c, double pts, int serial)
+{
+    double time = av_gettime_relative() / 1000000.0;
+    set_clock_at(c, pts, serial, time);
+}
+
+static void init_clock(Clock *c, int *queue_serial)
+{
+    c->speed = 1.0;
+    c->paused = 0;
+    c->queue_serial = queue_serial;
+    set_clock(c, NAN, -1);
+}
 
 typedef struct MRAVPacketNode {
     AVPacket pkt;
@@ -245,6 +286,8 @@ typedef struct Frame {
     int serial;
     double pts;           /* presentation timestamp for the frame */
     double duration;      /* estimated duration of the frame */
+    int64_t pos;          /* byte position of the frame in the input file */
+
     int width;
     int height;
     int format;
@@ -368,6 +411,33 @@ static Frame *frame_queue_peek_readable(FrameQueue *f, int block)
     return frame;
 }
 
+/* return the number of undisplayed frames in the queue */
+static int frame_queue_nb_remaining(FrameQueue *f)
+{
+    return f->size;
+}
+
+static Frame *frame_queue_peek_last(FrameQueue *f)
+{
+    return &f->queue[f->rindex];
+}
+
+static Frame *frame_queue_peek_next(FrameQueue *f)
+{
+    return &f->queue[(f->rindex + 1) % f->max_size];
+}
+
+static Frame *frame_queue_peek(FrameQueue *f)
+{
+    return &f->queue[(f->rindex) % f->max_size];
+}
+
+enum {
+    AV_SYNC_AUDIO_MASTER, /* default choice */
+    AV_SYNC_VIDEO_MASTER,
+    AV_SYNC_EXTERNAL_CLOCK, /* synchronize to an external clock */
+};
+
 typedef struct VideoState {
     
     const char *url;
@@ -402,7 +472,13 @@ typedef struct VideoState {
     FrameQueue sampq;
     FrameQueue pictq;
     
-    bool pause;
+    int av_sync_type;
+    Clock vidclk;
+    Clock audclk;
+    Clock extclk;
+    double frame_timer;
+    double max_frame_duration;
+    bool paused;
 }VideoState;
 
 static void msg_post (VideoState *is, MR_Msg_Type type);
@@ -1089,6 +1165,8 @@ static void *read_thread(void *ptr){
      
     is->ic = ic;
     
+    is->max_frame_duration = (ic->iformat->flags & AVFMT_TS_DISCONT) ? 10.0 : 3600.0;
+
     int st_index[AVMEDIA_TYPE_NB];
     memset(st_index, -1, sizeof(st_index));
     
@@ -1190,6 +1268,7 @@ static void *read_thread(void *ptr){
                 abstime.tv_nsec -= 1000000000;
             }
             
+            msg_post(is, MR_Msg_Type_PackQueueIsFull);
             pthread_mutex_lock(&wait_mutex);
             //pthread_cond_wait(&is->read_thread_cond, &wait_mutex);
             pthread_cond_timedwait(&is->read_thread_cond, &wait_mutex, &abstime);
@@ -1208,8 +1287,71 @@ static void *read_thread(void *ptr){
     return NULL;
 }
 
-#pragma mark -
-#pragma mark - 提供 packet 音频数据
+static double get_clock(Clock *c)
+{
+    if (*c->queue_serial != c->serial)
+        return NAN;
+    if (c->paused) {
+        return c->pts;
+    } else {
+        double time = av_gettime_relative() / 1000000.0;
+        return c->pts_drift + time - (time - c->last_updated) * (1.0 - c->speed);
+    }
+}
+
+static int get_master_sync_type(VideoState *is) {
+    if (is->av_sync_type == AV_SYNC_VIDEO_MASTER) {
+        if (is->video_st)
+            return AV_SYNC_VIDEO_MASTER;
+        else
+            return AV_SYNC_AUDIO_MASTER;
+    } else if (is->av_sync_type == AV_SYNC_AUDIO_MASTER) {
+        if (is->audio_st)
+            return AV_SYNC_AUDIO_MASTER;
+        else
+            return AV_SYNC_EXTERNAL_CLOCK;
+    } else {
+        return AV_SYNC_EXTERNAL_CLOCK;
+    }
+}
+
+
+/* get the current master clock value */
+static double get_master_clock(VideoState *is)
+{
+    double val;
+
+    switch (get_master_sync_type(is)) {
+        case AV_SYNC_VIDEO_MASTER:
+            val = get_clock(&is->vidclk);
+            break;
+        case AV_SYNC_AUDIO_MASTER:
+            val = get_clock(&is->audclk);
+            break;
+        default:
+            assert(0);
+            //val = get_clock(&is->extclk);
+            break;
+    }
+    return val;
+}
+
+static void sync_clock_to_slave(Clock *c, Clock *slave)
+{
+    double clock = get_clock(c);
+    double slave_clock = get_clock(slave);
+    if (!isnan(slave_clock) && (isnan(clock) || fabs(clock - slave_clock) > AV_NOSYNC_THRESHOLD))
+        set_clock(c, slave_clock, slave->serial);
+}
+
+static void update_video_pts(VideoState *is, double pts, int64_t pos, int serial) {
+    /* update current video pts */
+    set_clock(&is->vidclk, pts, serial);
+    sync_clock_to_slave(&is->extclk, &is->vidclk);
+}
+
+
+#pragma mark 提供 packet 音频数据
 
 int mr_fetch_packet_sample(MRPlayer opaque, uint8_t *buffer, int want){
     assert(opaque);
@@ -1217,7 +1359,7 @@ int mr_fetch_packet_sample(MRPlayer opaque, uint8_t *buffer, int want){
     
     assert(!av_sample_fmt_is_planar(is->auddec.target_sample_format));
     
-    if (is->pause) {
+    if (is->paused) {
         return 0;
     }
     
@@ -1226,10 +1368,18 @@ int mr_fetch_packet_sample(MRPlayer opaque, uint8_t *buffer, int want){
     while (want > 0) {
         Frame *af;
         if (!(af = frame_queue_peek_readable(&is->sampq, 0))){
+            msg_post(is, MR_Msg_Type_FrameQueueIsEmpty);
             return 0;
         }
         
         if (af->left_offset == 0) {
+//            is->clock.main_pts = af->pts;
+            /* Let's assume the audio driver that is used by SDL has two periods. */
+            double audio_clock = af->pts + (double) af->frame->nb_samples / af->frame->sample_rate;
+            if (audio_clock) {
+                set_clock_at(&is->audclk, audio_clock , 0, av_gettime_relative() / 1000000.0);
+                sync_clock_to_slave(&is->extclk, &is->audclk);
+            }
             DEBUGLog("audio frame pts:%.2f\n",af->pts);
         }
         uint8_t *src = af->frame->data[0];
@@ -1259,8 +1409,7 @@ int mr_fetch_packet_sample(MRPlayer opaque, uint8_t *buffer, int want){
     return 0;
 }
 
-#pragma mark -
-#pragma mark - 提供 palnar 音频数据
+#pragma mark 提供 palnar 音频数据
 
 int mr_fetch_planar_sample(MRPlayer opaque, uint8_t *l_buffer, int l_size, uint8_t *r_buffer, int r_size){
     assert(opaque);
@@ -1269,7 +1418,7 @@ int mr_fetch_planar_sample(MRPlayer opaque, uint8_t *l_buffer, int l_size, uint8
     
     assert(av_sample_fmt_is_planar(is->auddec.target_sample_format));
     
-    if (is->pause) {
+    if (is->paused) {
         return 0;
     }
     
@@ -1278,11 +1427,19 @@ int mr_fetch_planar_sample(MRPlayer opaque, uint8_t *l_buffer, int l_size, uint8
     while (l_size > 0 || r_size > 0) {
         Frame *af;
         if (!(af = frame_queue_peek_readable(&is->sampq, 0))){
+            msg_post(is, MR_Msg_Type_FrameQueueIsEmpty);
             return 0;
         }
         
         if (af->left_offset == 0) {
             DEBUGLog("audio frame pts:%.2f\n",af->pts);
+//            is->clock.main_pts = af->pts;
+            /* Let's assume the audio driver that is used by SDL has two periods. */
+            double audio_clock = af->pts + (double) af->frame->nb_samples / af->frame->sample_rate;
+            if (audio_clock) {
+                set_clock_at(&is->audclk, audio_clock , 0, av_gettime_relative() / 1000000.0);
+                sync_clock_to_slave(&is->extclk, &is->audclk);
+            }
         }
         
         uint8_t *l_src = af->frame->data[0];
@@ -1325,28 +1482,149 @@ int mr_fetch_planar_sample(MRPlayer opaque, uint8_t *l_buffer, int l_size, uint8
     return 0;
 }
 
-static void video_refresh(VideoState *is,double *remaining_time){
-    
+static double vp_duration(VideoState *is, Frame *vp, Frame *nextvp) {
+    if (vp->serial == nextvp->serial) {
+        double duration = nextvp->pts - vp->pts;
+        if (isnan(duration) || duration <= 0 || duration > is->max_frame_duration)
+            return vp->duration;
+        else
+            return duration;
+    } else {
+        return 0.0;
+    }
+}
+
+
+// 根据视频时钟与同步时钟(如音频时钟)的差值，校正delay值，使视频时钟追赶或等待同步时钟
+// 输入参数delay是上一帧播放时长，即上一帧播放后应延时多长时间后再播放当前帧，通过调节此值来调节当前帧播放快慢
+// 返回值delay是将输入参数delay经校正后得到的值
+static double compute_target_delay(double delay, VideoState *is)
+{
+    double sync_threshold, diff = 0;
+
+    /* if video is slave, we try to correct big delays by
+       duplicating or deleting a frame */
+    // 视频时钟与同步时钟(如音频时钟)的差异，时钟值是上一帧pts值(实为：上一帧pts + 上一帧至今流逝的时间差)
+    diff = get_clock(&is->vidclk) - get_master_clock(is);
+    // delay是上一帧播放时长：当前帧(待播放的帧)播放时间与上一帧播放时间差理论值
+    // diff是视频时钟与同步时钟的差值
+
+    /* skip or repeat frame. We take into account the
+       delay to compute the threshold. I still don't know
+       if it is the best guess */
+    // 若delay < AV_SYNC_THRESHOLD_MIN，则同步域值为AV_SYNC_THRESHOLD_MIN
+    // 若delay > AV_SYNC_THRESHOLD_MAX，则同步域值为AV_SYNC_THRESHOLD_MAX
+    // 若AV_SYNC_THRESHOLD_MIN < delay < AV_SYNC_THRESHOLD_MAX，则同步域值为delay
+    sync_threshold = FFMAX(AV_SYNC_THRESHOLD_MIN, FFMIN(AV_SYNC_THRESHOLD_MAX, delay));
+    if (!isnan(diff) && fabs(diff) < is->max_frame_duration) {
+        if (diff <= -sync_threshold)        // 视频时钟落后于同步时钟，且超过同步域值
+            delay = FFMAX(0, delay + diff); // 当前帧播放时刻落后于同步时钟(delay+diff<0)则delay=0(视频追赶，立即播放)，否则delay=delay+diff
+        else if (diff >= sync_threshold && delay > AV_SYNC_FRAMEDUP_THRESHOLD)  // 视频时钟超前于同步时钟，且超过同步域值，但上一帧播放时长超长
+            delay = delay + diff;           // 仅仅校正为delay=delay+diff，主要是AV_SYNC_FRAMEDUP_THRESHOLD参数的作用，不作同步补偿
+        else if (diff >= sync_threshold)    // 视频时钟超前于同步时钟，且超过同步域值
+            delay = 2 * delay;              // 视频播放要放慢脚步，delay扩大至2倍
+    }
+
+    av_log(NULL, AV_LOG_TRACE, "video: delay=%0.3f A-V=%f\n",
+            delay, -diff);
+
+    return delay;
+}
+
+static void video_display(VideoState *is)
+{
     Frame *af;
     if (!(af = frame_queue_peek_readable(&is->pictq, 0))){
+        msg_post(is, MR_Msg_Type_FrameQueueIsEmpty);
         return;
     }
-    double duration = af->duration;
-    DEBUGLog("video frame pts:%.2f\n",af->pts);
+
+    //    DEBUGLog("video frame pts:%.2f\n",af->pts);
     //    DEBUGLog("display frame:%g\n",duration);
-    
+
     //release old pic
     av_frame_unref(is->dispalying);
     // retain new pic.
     av_frame_ref(is->dispalying, af->frame);
-    
+
     if (is->display_func) {
         is->display_func(is->display_func_ctx,af->frame);
     }
-    
-    frame_queue_next(&is->pictq);
-    
-    *remaining_time = duration;
+}
+
+static void video_refresh(VideoState *is,double *remaining_time)
+{
+    double time;
+    int force_refresh;
+retry:
+    ///没有桢可显示
+    if (frame_queue_nb_remaining(&is->pictq) == 0) {
+        // nothing to do, no picture to display in the queue
+        force_refresh = 0;
+    } else {
+        double last_duration, duration, delay;
+        Frame *vp, *lastvp;
+        // 上一帧：上次已显示的帧
+        lastvp = frame_queue_peek_last(&is->pictq);
+        // 当前帧：当前待显示的帧
+        vp = frame_queue_peek(&is->pictq);
+        
+//        if (vp->serial != is->videoq.serial) {
+//            frame_queue_next(&is->pictq);
+//            goto retry;
+//        }
+        // lastvp和vp不是同一播放序列(一个seek会开始一个新播放序列)，将frame_timer更新为当前时间
+        if (lastvp->serial != vp->serial)
+            is->frame_timer = av_gettime_relative() / 1000000.0;
+
+        // 暂停处理：不停播放上一帧图像
+        if (is->paused)
+            goto display;
+
+        /* compute nominal last_duration */
+        last_duration = vp_duration(is, lastvp, vp);        // 上一帧播放时长：vp->pts - lastvp->pts
+        delay = compute_target_delay(last_duration, is);    // 根据视频时钟和同步时钟的差值，计算delay值
+
+        time= av_gettime_relative()/1000000.0;
+        // 当前帧播放时刻(is->frame_timer+delay)大于当前时刻(time)，表示播放时刻未到
+        if (time < is->frame_timer + delay) {
+            // 播放时刻未到，则更新刷新时间remaining_time为当前时刻到下一播放时刻的时间差
+            *remaining_time = FFMIN(is->frame_timer + delay - time, *remaining_time);
+            // 播放时刻未到，则不更新rindex，把上一帧再lastvp再播放一遍
+            goto display;
+        }
+
+        // 更新frame_timer值
+        is->frame_timer += delay;
+        // 校正frame_timer值：若frame_timer落后于当前系统时间太久(超过最大同步域值)，则更新为当前系统时间
+        if (delay > 0 && time - is->frame_timer > AV_SYNC_THRESHOLD_MAX)
+            is->frame_timer = time;
+        
+        pthread_mutex_lock(&is->pictq.mutex);
+        if (!isnan(vp->pts))
+            update_video_pts(is, vp->pts, vp->pos, vp->serial); // 更新视频时钟：时间戳、时钟时间
+        pthread_mutex_unlock(&is->pictq.mutex);
+
+        // 是否要丢弃未能及时播放的视频帧
+        if (frame_queue_nb_remaining(&is->pictq) > 1) {         // 队列中未显示帧数>1(只有一帧则不考虑丢帧)
+            Frame *nextvp = frame_queue_peek_next(&is->pictq);  // 下一帧：下一待显示的帧
+            duration = vp_duration(is, vp, nextvp);             // 当前帧vp播放时长 = nextvp->pts - vp->pts
+            // 丢帧策略: 当前帧vp未能及时播放，即下一帧播放时刻(is->frame_timer+duration)小于当前系统时刻(time)
+            if(time > is->frame_timer + duration){
+                // framedrop丢帧处理有两处：1) packet入队列前，2) frame未及时显示(此处)
+                frame_queue_next(&is->pictq);   // 删除上一帧已显示帧，即删除lastvp，读指针加1(从lastvp更新到vp)
+                goto retry;
+            }
+        }
+
+        // 删除当前读指针元素，读指针+1。若未丢帧，读指针从lastvp更新到vp；若有丢帧，读指针从vp更新到nextvp
+        frame_queue_next(&is->pictq);
+        force_refresh = 1;
+    }
+display:
+    /* display picture */
+    if (force_refresh)
+        video_display(is);                      // 取出当前帧vp(若有丢帧是nextvp)进行播放
 }
 
 #pragma mark -
@@ -1359,7 +1637,7 @@ static void *video_refresh_thread(void *ptr){
         if (remaining_time > 0.0)
             av_usleep((int)(int64_t)(remaining_time * 1000000.0));
         remaining_time = REFRESH_RATE;
-        if (is->pause) {
+        if (is->paused) {
             continue;
         }
         video_refresh(is, &remaining_time);
@@ -1398,7 +1676,7 @@ void * mr_player_instance_create(mr_init_params* params){
     is->supported_sample_rate = params->supported_sample_rate;
     
     is->supported_pixel_fmts = params->supported_pixel_fmts;
-    
+    is->av_sync_type = AV_SYNC_AUDIO_MASTER;
     ff_global_init();
     
     return is;
@@ -1424,7 +1702,11 @@ int mr_prepare_play(MRPlayer opaque){
 #warning need destroy queue!
         return -1;
     }
-    
+
+    init_clock(&is->vidclk, &is->videoq.serial);
+    init_clock(&is->audclk, &is->audioq.serial);
+    init_clock(&is->extclk, &is->extclk.serial);
+
     if (pthread_cond_init(&is->read_thread_cond,NULL) != 0){
         INFO("pthread_cond_init read_thread_cond error\n");
         return -1;
@@ -1449,7 +1731,7 @@ int mr_play(MRPlayer opaque){
     assert(opaque);
     INFO("mr_play\n");
     VideoState *is = opaque;
-    is->pause = false;
+    is->paused = is->audclk.paused = is->vidclk.paused = is->extclk.paused = !is->paused;
     return 0;
 }
 
@@ -1457,7 +1739,7 @@ int mr_pause(MRPlayer opaque){
     assert(opaque);
     INFO("mr_pause\n");
     VideoState *is = opaque;
-    is->pause = true;
+    is->paused = is->audclk.paused = is->vidclk.paused = is->extclk.paused = !is->paused;
     return 0;
 }
 
