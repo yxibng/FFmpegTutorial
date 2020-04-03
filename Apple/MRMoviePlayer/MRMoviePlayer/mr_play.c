@@ -36,7 +36,7 @@
 #define AV_NOSYNC_THRESHOLD 10.0
 
 
-void mrlog(const char * f, ...){
+static void mrlog(const char * f, ...){
     va_list args;       //定义一个va_list类型的变量，用来储存单个参数
     va_start(args,f); //使args指向可变参数的第一个参数
     vprintf(f,args);  //必须用vprintf等带V的
@@ -857,7 +857,7 @@ static int decoder_decode_frame(Decoder *d, AVFrame *frame) {
 #pragma mark -
 #pragma mark - 音频解码线程
 
-void * audio_decode_func (void *ptr){
+static void * audio_decode_func (void *ptr){
     VideoState *is = ptr;
     AVFrame *frame = av_frame_alloc();
     if (!frame) {
@@ -906,7 +906,7 @@ void * audio_decode_func (void *ptr){
 #pragma mark -
 #pragma mark - 视频解码线程
 
-void * video_decode_func (void *ptr){
+static void * video_decode_func (void *ptr){
     VideoState *is = ptr;
     int got_frame = 0;
     
@@ -919,6 +919,15 @@ void * video_decode_func (void *ptr){
         
         got_frame = decoder_decode_frame(&is->viddec, frame);
         
+        if (got_frame < 0) {
+            if (&is->viddec.finished) {
+                av_log(NULL, AV_LOG_ERROR, "decode frame eof.");
+            } else {
+                av_log(NULL, AV_LOG_ERROR, "can't decode frame.");
+            }
+            av_frame_free(&frame);
+            break;
+        }
         ///存在视频转换器，则进行格式转换
         if(is->viddec.sws_ctx){
             AVFrame *out = NULL;
@@ -1546,9 +1555,8 @@ static void video_display(VideoState *is)
     av_frame_unref(is->dispalying);
     // retain new pic.
     av_frame_ref(is->dispalying, af->frame);
-
     if (is->display_func) {
-        is->display_func(is->display_func_ctx,af->frame);
+        is->display_func(is->display_func_ctx,is->dispalying);
     }
 }
 
