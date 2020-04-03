@@ -800,6 +800,7 @@ static int rescale_video_frame(AVFrame *in, AVFrame **out, VideoState *is){
     if(ret < 0){
         // convert error, try next frame
         av_log(NULL, AV_LOG_ERROR, "fail scale video");
+        av_freep(&out_frame->data);
         av_frame_free(&out_frame);
         return -1;
     }
@@ -864,41 +865,52 @@ static void * audio_decode_func (void *ptr){
         av_log(NULL, AV_LOG_ERROR, "can't alloc a frame.");
         return NULL;
     }
-    int got_frame = 0;
     do {
-        got_frame = decoder_decode_frame(&is->auddec, frame);
-        if (got_frame >= 0) {
-            
+        int got_frame = decoder_decode_frame(&is->auddec, frame);
+        
+        if (got_frame < 0) {
+            if (&is->viddec.finished) {
+                av_log(NULL, AV_LOG_ERROR, "decode frame eof.");
+            } else {
+                av_log(NULL, AV_LOG_ERROR, "can't decode frame.");
+            }
+            break;
+        } else {
+            AVFrame *out = frame;
+            int resampled = 0;
             ///存在音频重采样器，则进行重采样
             if(is->auddec.swr_ctx) {
-                AVFrame *out = NULL;
                 if (resample_audio_frame(frame ,&out, is)) {
-                    av_frame_free(&frame);
+                    av_log(NULL, AV_LOG_ERROR, "can't resample audio frame.");
                     break;
                 } else {
-                    av_frame_free(&frame);
-                    frame = out;
+                    resampled = 1;
                 }
             }
             
             Frame *af = NULL;
             if (NULL == (af = frame_queue_peek_writable(&is->sampq))) {
-                av_frame_free(&frame);
                 break;
             }
+            
             is->sampq.serial++;
             af->serial = is->sampq.serial;
-            if (frame->pts != AV_NOPTS_VALUE) {
-                af->pts = is->auddec.time_base * frame->pts;
+            if (out->pts != AV_NOPTS_VALUE) {
+                af->pts = is->auddec.time_base * out->pts;
             }
             
-            av_frame_move_ref(af->frame, frame);
+            av_frame_ref(af->frame, out);
             frame_queue_push(&is->sampq);
-        } else {
-#warning todo there.
-            break;
+            
+            if (resampled) {
+                av_frame_free(&out);
+            }
         }
     } while (1);
+    
+    if (frame) {
+        av_frame_free(&frame);
+    }
     
     return NULL;
 }
@@ -908,16 +920,15 @@ static void * audio_decode_func (void *ptr){
 
 static void * video_decode_func (void *ptr){
     VideoState *is = ptr;
-    int got_frame = 0;
+    AVFrame *frame = av_frame_alloc();
+    if (!frame) {
+        av_log(NULL, AV_LOG_ERROR, "can't alloc a frame.");
+        return NULL;
+    }
     
     do {
-        AVFrame *frame = av_frame_alloc();
-        if (!frame) {
-            av_log(NULL, AV_LOG_ERROR, "can't alloc a frame.");
-            return NULL;
-        }
         
-        got_frame = decoder_decode_frame(&is->viddec, frame);
+        int got_frame = decoder_decode_frame(&is->viddec, frame);
         
         if (got_frame < 0) {
             if (&is->viddec.finished) {
@@ -925,49 +936,53 @@ static void * video_decode_func (void *ptr){
             } else {
                 av_log(NULL, AV_LOG_ERROR, "can't decode frame.");
             }
-            av_frame_free(&frame);
             break;
-        }
-        ///存在视频转换器，则进行格式转换
-        if(is->viddec.sws_ctx){
-            AVFrame *out = NULL;
-            if (rescale_video_frame(frame, &out, is)) {
-                av_frame_free(&frame);
+        } else {
+            AVFrame *out = frame;
+            int scaled = 0;
+            ///存在视频转换器，则进行格式转换
+            if(is->viddec.sws_ctx){
+                if (rescale_video_frame(frame, &out, is)) {
+                    av_log(NULL, AV_LOG_ERROR, "can't rescale video frame.");
+                    break;
+                } else {
+                    scaled = 1;
+                }
+            }
+            
+            Frame *af = NULL;
+            if (NULL == (af = frame_queue_peek_writable(&is->pictq))){
                 break;
+            }
+            
+            if (out->pts != AV_NOPTS_VALUE) {
+                af->pts = is->viddec.time_base * out->pts;
+            }
+            
+            double duration = av_frame_get_pkt_duration(out);
+            
+            if ((int)(duration * 1000) == 0) {
+                duration = 1 / is->viddec.fps;
             } else {
-                av_frame_free(&frame);
-                //!important: fix memory leak.
-                //frame = out;
-                frame = av_frame_clone(out);
+                duration = duration * is->viddec.time_base;
+                duration += af->frame->repeat_pict / (2 * is->viddec.fps);
+            }
+            
+            af->duration = duration;
+            is->pictq.serial++;
+            af->serial = is->pictq.serial;
+            av_frame_ref(af->frame, out);
+            frame_queue_push(&is->pictq);
+            if (scaled) {
                 av_freep(out->data);
                 av_frame_free(&out);
             }
         }
-        
-        Frame *af = NULL;
-        if (NULL == (af = frame_queue_peek_writable(&is->pictq))){
-            av_frame_free(&frame);
-            break;
-        }
-        
-        if (frame->pts != AV_NOPTS_VALUE) {
-            af->pts = is->viddec.time_base * frame->pts;
-        }
-        
-        double duration = av_frame_get_pkt_duration(frame);
-        if ((int)(duration * 1000) == 0) {
-            duration = 1 / is->viddec.fps;
-        } else {
-            duration = duration * is->viddec.time_base;
-            duration += af->frame->repeat_pict / (2 * is->viddec.fps);
-        }
-        
-        af->duration = duration;
-        is->pictq.serial++;
-        af->serial = is->pictq.serial;
-        av_frame_move_ref(af->frame, frame);
-        frame_queue_push(&is->pictq);
     } while (1);
+    
+    if (frame) {
+        av_frame_free(&frame);
+    }
     
     return NULL;
 }
