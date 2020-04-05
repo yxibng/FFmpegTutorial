@@ -794,6 +794,8 @@ static int rescale_video_frame(AVFrame *in, AVFrame **out, VideoState *is){
     out_frame->width   = d.pic_width;
     out_frame->height  = d.pic_height;
     
+    memcpy(out_frame->linesize, in->linesize, sizeof(out_frame->linesize));
+    
     av_image_alloc(out_frame->data, out_frame->linesize, d.pic_width, d.pic_height, d.target_pixel_format, 1);
     
     int ret = sws_scale(d.sws_ctx, (const uint8_t* const*)in->data, in->linesize, 0, in->height, out_frame->data, out_frame->linesize);
@@ -869,7 +871,7 @@ static void * audio_decode_func (void *ptr){
         int got_frame = decoder_decode_frame(&is->auddec, frame);
         
         if (got_frame < 0) {
-            if (&is->viddec.finished) {
+            if (is->viddec.finished) {
                 av_log(NULL, AV_LOG_ERROR, "decode frame eof.");
             } else {
                 av_log(NULL, AV_LOG_ERROR, "can't decode frame.");
@@ -931,7 +933,7 @@ static void * video_decode_func (void *ptr){
         int got_frame = decoder_decode_frame(&is->viddec, frame);
         
         if (got_frame < 0) {
-            if (&is->viddec.finished) {
+            if (is->viddec.finished) {
                 av_log(NULL, AV_LOG_ERROR, "decode frame eof.");
             } else {
                 av_log(NULL, AV_LOG_ERROR, "can't decode frame.");

@@ -9,7 +9,8 @@
 #import "MRConvertUtil.h"
 #import <CoreGraphics/CoreGraphics.h>
 
-#define BYTE_ALIGN_2(_s_) (( _s_ + 1)/2 * 2)
+#define BYTE_ALIGN_X(_s_,_x_) (( _s_ + _x_ - 1)/_x_ * _x_)
+#define BYTE_ALIGN_2(_s_) (BYTE_ALIGN_X(_s_,2))
 
 @implementation MRConvertUtil
 
@@ -23,37 +24,64 @@
 
 + (CVPixelBufferRef)createCVPixelBufferFromAVFrame:(AVFrame*)aFrame opt:(CVPixelBufferPoolRef _Nullable)poolRef
 {
+    NSParameterAssert(aFrame->format == AV_PIX_FMT_NV12);
+    
     CVPixelBufferRef pixelBuffer = NULL;
     CVReturn result = kCVReturnError;
-    int w = aFrame->width;
-    int h = aFrame->height;
     if (poolRef) {
         result = CVPixelBufferPoolCreatePixelBuffer(NULL, poolRef, &pixelBuffer);
     } else {
-        NSDictionary *pixelAttributes = @{(NSString*)kCVPixelBufferIOSurfacePropertiesKey:@{}};
+        int w = aFrame->width;
+        int h = aFrame->height;
+        int linesize = 32;//aFrame->linesize[0];//BYTE_ALIGN_X(w,64);//
+        
+        NSMutableDictionary* attributes = [NSMutableDictionary dictionary];
+//        [attributes setObject:[NSNumber numberWithInt:kCVPixelFormatType_420YpCbCr8BiPlanarFullRange] forKey:(NSString*)kCVPixelBufferPixelFormatTypeKey];
+//        [attributes setObject:[NSNumber numberWithInt:w] forKey: (NSString*)kCVPixelBufferWidthKey];
+//        [attributes setObject:[NSNumber numberWithInt:h] forKey: (NSString*)kCVPixelBufferHeightKey];
+        [attributes setObject:@(linesize) forKey:(NSString*)kCVPixelBufferBytesPerRowAlignmentKey];
+        [attributes setObject:[NSDictionary dictionary] forKey:(NSString*)kCVPixelBufferIOSurfacePropertiesKey];
         
         result = CVPixelBufferCreate(kCFAllocatorDefault,
                                      w,
                                      h,
-                                     kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
-                                     (__bridge CFDictionaryRef)(pixelAttributes),
+                                     kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
+                                     (__bridge CFDictionaryRef)(attributes),
                                      &pixelBuffer);
     }
     
     if (kCVReturnSuccess == result) {
+        int h = aFrame->height;
         CVPixelBufferLockBaseAddress(pixelBuffer,0);
-        unsigned char *yDestPlane = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0);
         
-        // Here y_ch0 is Y-Plane of YUV(NV12) data.
+        // Here y_src is Y-Plane of YUV(NV12) data.
+        unsigned char *y_src  = aFrame->data[0];
+        unsigned char *y_dest = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0);
+        size_t y_dest_bytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0);
+        size_t y_src_bytesPerRow  = aFrame->linesize[0];
         
-        unsigned char *y_ch0 = aFrame->data[0];
-        unsigned char *y_ch1 = aFrame->data[1];
-        // important !! 这里不能使用 w ，因为ffmpeg对数据做了字节对齐！！会导致绿屏！如果视频宽度刚好就是一个对齐的大小时，w就和linesize[0]相等，所以没问题；
-        memcpy(yDestPlane, y_ch0, aFrame->linesize[0] * h);
-        unsigned char *uvDestPlane = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1);
+        for (int i = 0; i < h; i ++) {
+            bzero(y_dest, y_dest_bytesPerRow);
+            memcpy(y_dest, y_src, y_src_bytesPerRow);
+            y_src  += y_src_bytesPerRow;
+            y_dest += y_dest_bytesPerRow;
+        }
+        //memcpy(y_dest, y_src, bytePerRowY * h);
         
-        // Here y_ch1 is UV-Plane of YUV(NV12) data.
-        memcpy(uvDestPlane, y_ch1, aFrame->linesize[1] * BYTE_ALIGN_2(h)/2);
+        // Here uv_src is UV-Plane of YUV(NV12) data.
+        unsigned char *uv_src = aFrame->data[1];
+        unsigned char *uv_dest = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1);
+        size_t uv_dest_bytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1);
+        size_t uv_src_bytesPerRow  = aFrame->linesize[1];
+        
+        for (int i = 0; i <= h/2; i ++) {
+            bzero(uv_dest, uv_dest_bytesPerRow);
+            memcpy(uv_dest, uv_src, uv_src_bytesPerRow);
+            uv_src  += uv_src_bytesPerRow;
+            uv_dest += uv_dest_bytesPerRow;
+        }
+        //memcpy(uv_dest, uv_src, bytesPerRowUV * BYTE_ALIGN_2(h)/2);
+        
         CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
     }
     return pixelBuffer;
@@ -88,6 +116,8 @@
 
 + (UIImage *)imageFromAVFrameOverBitmap:(AVFrame*)aFrame
 {
+    NSParameterAssert(aFrame->format == AV_PIX_FMT_RGB24);
+    
     int w = aFrame->width;
     int h = aFrame->height;
     
@@ -113,9 +143,12 @@
                                        NO,
                                        kCGRenderingIntentDefault);
     CGColorSpaceRelease(colorSpace);
+    UIImage *image = nil;
+    if (cgImage) {
+        image = [UIImage imageWithCGImage:cgImage];
+        CGImageRelease(cgImage);
+    }
     
-    UIImage *image = [UIImage imageWithCGImage:cgImage];
-    CGImageRelease(cgImage);
     CGDataProviderRelease(provider);
     CFRelease(data);
     

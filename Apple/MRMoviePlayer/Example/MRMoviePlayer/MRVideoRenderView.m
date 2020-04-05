@@ -35,6 +35,7 @@
 
 - (void)_init {
     self.layer.opaque = YES;
+    self.layer.backgroundColor = [UIColor blackColor].CGColor;
     self.usePool = YES;
     [self setContentMode:UIViewContentModeScaleToFill];
 }
@@ -94,14 +95,17 @@
     }
 }
 
-- (CMSampleBufferRef)createSampleBufferFromAVFrame:(AVFrame*)frame w:(int)w h:(int)h
+- (CMSampleBufferRef)createSampleBufferFromAVFrame:(AVFrame*)frame
 {
     if (self.usePool) {
         CVReturn theError;
         if (!self.pixelBufferPool){
-            int linesize = frame->linesize[0];
+            int linesize = 32;//frame->linesize[0];
+            int w = frame->width;
+            int h = frame->height;
+            
             NSMutableDictionary* attributes = [NSMutableDictionary dictionary];
-            [attributes setObject:[NSNumber numberWithInt:kCVPixelFormatType_420YpCbCr8BiPlanarFullRange] forKey:(NSString*)kCVPixelBufferPixelFormatTypeKey];
+            [attributes setObject:[NSNumber numberWithInt:kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange] forKey:(NSString*)kCVPixelBufferPixelFormatTypeKey];
             [attributes setObject:[NSNumber numberWithInt:w] forKey: (NSString*)kCVPixelBufferWidthKey];
             [attributes setObject:[NSNumber numberWithInt:h] forKey: (NSString*)kCVPixelBufferHeightKey];
             [attributes setObject:@(linesize) forKey:(NSString*)kCVPixelBufferBytesPerRowAlignmentKey];
@@ -132,15 +136,18 @@
 
 - (void)enqueueAVFrame:(AVFrame *)aFrame
 {
-    CMSampleBufferRef sampleBuffer = [self createSampleBufferFromAVFrame:aFrame w:aFrame->width h:aFrame->height];
-    if ((dispatch_queue_get_label(dispatch_get_main_queue()) == dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL))) {
-        [self enqueueSampleBuffer:sampleBuffer];
-    } else {
-        dispatch_sync(dispatch_get_main_queue(), ^{
+    CMSampleBufferRef sampleBuffer = [self createSampleBufferFromAVFrame:aFrame];
+    
+    if (sampleBuffer) {
+        if ((dispatch_queue_get_label(dispatch_get_main_queue()) == dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL))) {
             [self enqueueSampleBuffer:sampleBuffer];
-        });
+        } else {
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                [self enqueueSampleBuffer:sampleBuffer];
+            });
+        }
+        CFRelease(sampleBuffer);
     }
-    CFRelease(sampleBuffer);
 }
 
 @end

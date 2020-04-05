@@ -34,9 +34,10 @@
 
 @implementation MRViewController
 
-int displayFunc(void *context,AVFrame *f){
+int displayFunc(void *context,void *f){
+    AVFrame *frame = (AVFrame *)f;
     MRViewController *vc = (__bridge MRViewController *)(context);
-    [vc.renderView enqueueAVFrame:f];
+    [vc displayFrame:frame];
     return 0;
 }
 
@@ -95,6 +96,7 @@ static void msgFunc (void *context,MR_Msg *msg){
         self.renderView.frame = self.view.bounds;
         self.renderView.contentMode = UIViewContentModeScaleAspectFit;
         self.renderView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+//        self.renderView.usePool = NO;
         [self.view insertSubview:self.renderView atIndex:0];
     }
 }
@@ -330,18 +332,27 @@ static inline OSStatus MRRenderCallback(void *inRefCon,
     params->url = "http://localhost/movies/%e5%82%b2%e6%85%a2%e4%b8%8e%e5%81%8f%e8%a7%81.BD1280%e8%b6%85%e6%b8%85%e5%9b%bd%e8%8b%b1%e5%8f%8c%e8%af%ad%e4%b8%ad%e8%8b%b1%e5%8f%8c%e5%ad%97.mp4";
     params->url = "http://localhost/ffmpeg-test/sintel.mp4";
     params->url = "http://192.168.3.2/ffmpeg-test/xp5.mp4";
+    params->url = "http://data.vod.itc.cn/?new=/41/246/gLIVe2hWQVuAETeXyjRADD.mp4&vid=85433739&plat=14&mkey=FK6r74omqJBNOJLzUIcia16b27BEXili&ch=null&user=api&qd=8001&cv=3.13&uid=F45C89AE5BC3&ca=2&pg=5&pt=1&prod=ifox";
+//    params->url = "http://data.vod.itc.cn/?new=/73/15/oFed4wzSTZe8HPqHZ8aF7J.mp4&vid=77972299&plat=14&mkey=XhSpuZUl_JtNVIuSKCB05MuFBiqUP7rB&ch=null&user=api&qd=8001&cv=3.13&uid=F45C89AE5BC3&ca=2&pg=5&pt=1&prod=ifox";
     
     params->msg_func = &msgFunc;
     params->msg_func_ctx = (__bridge void *)self;
     params->supported_sample_rate = _targetSampleRate;
     params->supported_sample_fmts = MR_SAMPLE_FMT_S16P | MR_SAMPLE_FMT_S16 | MR_SAMPLE_FMT_FLTP | MR_SAMPLE_FMT_FLT;
-    params->supported_pixel_fmts = MR_PIX_FMT_NV12;//MR_PIX_FMT_YUV420P;//
+    params->supported_pixel_fmts = MR_PIX_FMT_NV12;//MR_PIX_FMT_YUV420P;//MR_PIX_FMT_RGB24;//
     
     MRPlayer player = mr_player_instance_create(params);
+    free(params);
+    params = NULL;
     ///默认暂停
     mr_pause(player);
     mr_prepare_play(player);
     self.player = player;
+}
+
+- (void)displayFrame:(AVFrame *)frame
+{
+    [self.renderView enqueueAVFrame:frame];
 }
 
 - (IBAction)onPlayOrPause:(UIButton *)sender {
