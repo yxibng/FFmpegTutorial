@@ -534,6 +534,8 @@ static MRPixelFormat AVPixelFormat2MR (enum AVPixelFormat avpf){
             return MR_PIX_FMT_NV12;
         case AV_PIX_FMT_NV21:
             return MR_PIX_FMT_NV21;
+        case AV_PIX_FMT_RGB24:
+            return MR_PIX_FMT_RGB24;
         default:
         {
             assert(0);
@@ -551,6 +553,8 @@ static enum AVPixelFormat MRPixelFormat2AV (MRPixelFormat mrpf){
             return AV_PIX_FMT_NV12;
         case MR_PIX_FMT_NV21:
             return AV_PIX_FMT_NV21;
+        case MR_PIX_FMT_RGB24:
+            return AV_PIX_FMT_RGB24;
         default:
         {
             assert(0);
@@ -738,6 +742,13 @@ static int create_sws_ctx_ifneed(VideoState *is,Decoder *decoder){
     }
     
     if (!matched) {
+        if ((is->supported_pixel_fmts & MR_PIX_FMT_RGB24) && (format == MRPixelFormat2AV(MR_PIX_FMT_RGB24))) {
+            matched = true;
+            return 0;
+        }
+    }
+    
+    if (!matched) {
         enum AVPixelFormat first_supported_format = AV_PIX_FMT_NONE;
         
         if ((is->supported_pixel_fmts & MR_PIX_FMT_YUV420P)) {
@@ -754,6 +765,10 @@ static int create_sws_ctx_ifneed(VideoState *is,Decoder *decoder){
             if ((is->supported_pixel_fmts & MR_PIX_FMT_NV21)) {
                 first_supported_format = MRPixelFormat2AV(MR_PIX_FMT_NV21);
             }
+        }
+        
+        if ((is->supported_pixel_fmts & MR_PIX_FMT_RGB24)) {
+            first_supported_format = MRPixelFormat2AV(MR_PIX_FMT_RGB24);
         }
         
         if (AV_PIX_FMT_NONE == first_supported_format) {
