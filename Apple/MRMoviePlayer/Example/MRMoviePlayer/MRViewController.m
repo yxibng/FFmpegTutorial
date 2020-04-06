@@ -339,7 +339,7 @@ static inline OSStatus MRRenderCallback(void *inRefCon,
     params->msg_func_ctx = (__bridge void *)self;
     params->supported_sample_rate = _targetSampleRate;
     params->supported_sample_fmts = MR_SAMPLE_FMT_S16P | MR_SAMPLE_FMT_S16 | MR_SAMPLE_FMT_FLTP | MR_SAMPLE_FMT_FLT;
-    params->supported_pixel_fmts = MR_PIX_FMT_NV12;//MR_PIX_FMT_YUV420P;//MR_PIX_FMT_RGB24;//
+    params->supported_pixel_fmts = MR_PIX_FMT_NV12;//MR_PIX_FMT_YUV420P;//MR_PIX_FMT_RGB24;//MR_PIX_FMT_NV21;//
     
     MRPlayer player = mr_player_instance_create(params);
     free(params);
