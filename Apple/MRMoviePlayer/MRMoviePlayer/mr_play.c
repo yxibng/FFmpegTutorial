@@ -407,7 +407,7 @@ static Frame *frame_queue_peek_readable(FrameQueue *f, int block)
     if (f->pktq->abort_request)
         return NULL;
     Frame *frame = &f->queue[f->rindex];
-    DEBUGLog("frame queue read %d %s (%d/%d)\n",frame->serial ,f->name, f->rindex,f->size);
+    DEBUGLog("%s frame queue read %d (%d/%d)\n", f->name, frame->serial, f->rindex, f->size);
     return frame;
 }
 
@@ -1595,7 +1595,7 @@ static void video_display(VideoState *is)
 static void video_refresh(VideoState *is,double *remaining_time)
 {
     double time;
-    int force_refresh;
+    int force_refresh = 0;
 retry:
     ///没有桢可显示
     if (frame_queue_nb_remaining(&is->pictq) == 0) {
@@ -1618,8 +1618,9 @@ retry:
             is->frame_timer = av_gettime_relative() / 1000000.0;
 
         // 暂停处理：不停播放上一帧图像
-        if (is->paused)
+        if (is->paused){
             goto display;
+        }
 
         /* compute nominal last_duration */
         last_duration = vp_duration(is, lastvp, vp);        // 上一帧播放时长：vp->pts - lastvp->pts

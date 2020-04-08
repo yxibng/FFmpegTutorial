@@ -25,20 +25,7 @@
 + (CVPixelBufferRef)createCVPixelBufferFromAVFrame:(AVFrame*)aFrame opt:(CVPixelBufferPoolRef _Nullable)poolRef
 {
     if (aFrame->format == AV_PIX_FMT_NV21) {
-        unsigned char *uv_src = aFrame->data[1];
-        size_t uv_src_bytesPerRow = aFrame->linesize[1];
-        /*
-         将VU交换成UV；
-         */
-        int h = aFrame->height;
-        for (int i = 0; i < BYTE_ALIGN_2(h)/2; i ++) {
-            for (int j = 0; j < uv_src_bytesPerRow - 1; j+=2) {
-                int v = uv_src[j];
-                uv_src[j] = uv_src[j+1];
-                uv_src[j+1] = v;
-            }
-            uv_src += uv_src_bytesPerRow;
-        }
+        //later will swap VU. we won't modify the avframe data, because the frame can be dispaly again!
     } else {
         NSParameterAssert(aFrame->format == AV_PIX_FMT_NV12);
     }
@@ -114,6 +101,21 @@
         }
         //memcpy(uv_dest, uv_src, bytesPerRowUV * BYTE_ALIGN_2(h)/2);
         
+        //only swap VU for NV21
+        if (aFrame->format == AV_PIX_FMT_NV21) {
+            unsigned char *uv = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1);
+            /*
+             将VU交换成UV；
+             */
+            for (int i = 0; i < BYTE_ALIGN_2(h)/2; i ++) {
+                for (int j = 0; j < uv_dest_bytesPerRow - 1; j+=2) {
+                    int v = *uv;
+                    *uv = *(uv + 1);
+                    *(uv + 1) = v;
+                    uv += 2;
+                }
+            }
+        }
         CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
     }
     return pixelBuffer;

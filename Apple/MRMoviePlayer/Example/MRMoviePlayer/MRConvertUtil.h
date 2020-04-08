@@ -6,6 +6,7 @@
 //  Copyright © 2019 Awesome FFmpeg Study Demo. All rights reserved.
 //
 // CFAutorelease CVPixelBufferRef or CMSampleBufferRef cause memory leak！
+// convert AVFrame which format is AV_PIX_FMT_NV12 or AV_PIX_FMT_NV21 to CVPixelBufferRef.
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
@@ -21,6 +22,7 @@
 + (CVPixelBufferRef)createCVPixelBufferFromAVFrame:(AVFrame*)pFrame opt:(CVPixelBufferPoolRef)poolRef;
 
 + (UIImage *)imageFromCVPixelBuffer:(CVPixelBufferRef)pixelBuffer;
+//only support AV_PIX_FMT_RGB24 format!
 + (UIImage *)imageFromAVFrameOverBitmap:(AVFrame*)aFrame;
 + (UIImage *)imageFromAVFrameOverPixelBuffer:(AVFrame*)aFrame;
 ///need CFRelease the result
