@@ -8,7 +8,7 @@
 
 #import <UIKit/UIKit.h>
 #import <CoreMedia/CMSampleBuffer.h>
-#import <libavutil/frame.h>
+#import <MRMoviePlayer/mr_play.h>
 
 //only support MR_PIX_FMT_NV12/AV_PIX_FMT_NV12
 
@@ -18,6 +18,6 @@
 ///only main queue
 - (void)enqueueSampleBuffer:(CMSampleBufferRef)buffer;
 ///can invoke from any queue
-- (void)enqueueAVFrame:(AVFrame*)aFrame;
+- (void)enqueueAVFrame:(MRPicture*)picture;
 
 @end

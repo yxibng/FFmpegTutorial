@@ -34,10 +34,9 @@
 
 @implementation MRViewController
 
-int displayFunc(void *context,void *f){
-    AVFrame *frame = (AVFrame *)f;
+int displayFunc(void *context,MRPicture *p){
     MRViewController *vc = (__bridge MRViewController *)(context);
-    [vc displayFrame:frame];
+    [vc displayPicture:p];
     return 0;
 }
 
@@ -350,9 +349,9 @@ static inline OSStatus MRRenderCallback(void *inRefCon,
     self.player = player;
 }
 
-- (void)displayFrame:(AVFrame *)frame
+- (void)displayPicture:(MRPicture *)picture
 {
-    [self.renderView enqueueAVFrame:frame];
+    [self.renderView enqueueAVFrame:picture];
 }
 
 - (IBAction)onPlayOrPause:(UIButton *)sender {

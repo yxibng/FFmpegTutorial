@@ -95,15 +95,15 @@
     }
 }
 
-- (CMSampleBufferRef)createSampleBufferFromAVFrame:(AVFrame*)frame
+- (CMSampleBufferRef)createSampleBufferFromMRPicture:(MRPicture *)picture
 {
     if (self.usePool) {
         CVReturn theError;
         if (!self.pixelBufferPool){
             int linesize = 32;//frame->linesize[0];
-            int w = frame->width;
-            int h = frame->height;
-            OSType pixelFormatType = frame->color_range == AVCOL_RANGE_MPEG ? kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange : kCVPixelFormatType_420YpCbCr8BiPlanarFullRange;
+            int w = picture->width;
+            int h = picture->height;
+            OSType pixelFormatType = picture->color_range == MRCOL_RANGE_MPEG ? kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange : kCVPixelFormatType_420YpCbCr8BiPlanarFullRange;
             
             NSMutableDictionary* attributes = [NSMutableDictionary dictionary];
             [attributes setObject:@(pixelFormatType) forKey:(NSString*)kCVPixelBufferPixelFormatTypeKey];
@@ -119,7 +119,7 @@
         }
     }
     
-    CVPixelBufferRef pixelBuffer = [MRConvertUtil createCVPixelBufferFromAVFrame:frame opt:self.pixelBufferPool];
+    CVPixelBufferRef pixelBuffer = [MRConvertUtil createCVPixelBufferFromPicture:picture opt:self.pixelBufferPool];
     
     if (pixelBuffer) {
         CMSampleBufferRef buffer = [MRConvertUtil createCMSampleBufferFromCVPixelBuffer:pixelBuffer];
@@ -135,9 +135,9 @@
     [layer enqueueSampleBuffer:buffer];
 }
 
-- (void)enqueueAVFrame:(AVFrame *)aFrame
+- (void)enqueueAVFrame:(MRPicture *)picture
 {
-    CMSampleBufferRef sampleBuffer = [self createSampleBufferFromAVFrame:aFrame];
+    CMSampleBufferRef sampleBuffer = [self createSampleBufferFromMRPicture:picture];
     
     if (sampleBuffer) {
         if ((dispatch_queue_get_label(dispatch_get_main_queue()) == dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL))) {

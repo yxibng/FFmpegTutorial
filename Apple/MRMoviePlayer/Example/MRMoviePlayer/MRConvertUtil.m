@@ -17,17 +17,18 @@
 #pragma mark - YUV(NV12)-->CVPixelBufferRef Conversion
 
 //https://stackoverflow.com/questions/25659671/how-to-convert-from-yuv-to-ciimage-for-ios
-+ (CVPixelBufferRef)createCVPixelBufferFromAVFrame:(AVFrame*)aFrame
++ (CVPixelBufferRef)createCVPixelBufferFromPicture:(MRPicture *)picture
 {
-    return [self createCVPixelBufferFromAVFrame:aFrame opt:NULL];
+    return [self createCVPixelBufferFromPicture:picture opt:NULL];
 }
 
-+ (CVPixelBufferRef)createCVPixelBufferFromAVFrame:(AVFrame*)aFrame opt:(CVPixelBufferPoolRef _Nullable)poolRef
++ (CVPixelBufferRef)createCVPixelBufferFromPicture:(MRPicture *)picture
+                                               opt:(CVPixelBufferPoolRef)poolRef
 {
-    if (aFrame->format == AV_PIX_FMT_NV21) {
+    if (picture->format == MR_PIX_FMT_NV21) {
         //later will swap VU. we won't modify the avframe data, because the frame can be dispaly again!
     } else {
-        NSParameterAssert(aFrame->format == AV_PIX_FMT_NV12);
+        NSParameterAssert(picture->format == MR_PIX_FMT_NV12);
     }
     
     CVPixelBufferRef pixelBuffer = NULL;
@@ -35,14 +36,14 @@
     if (poolRef) {
         result = CVPixelBufferPoolCreatePixelBuffer(NULL, poolRef, &pixelBuffer);
     } else {
-        int w = aFrame->width;
-        int h = aFrame->height;
-        int linesize = 32;//FFMpeg 解码数据对齐是32，这里期望CVPixelBuffer也能使用32对齐，但实际来看却是64！
+        const int w = picture->width;
+        const int h = picture->height;
+        const int linesize = 32;//FFMpeg 解码数据对齐是32，这里期望CVPixelBuffer也能使用32对齐，但实际来看却是64！
         
         //AVCOL_RANGE_MPEG对应tv，AVCOL_RANGE_JPEG对应pc
         //Y′ values are conventionally shifted and scaled to the range [16, 235] (referred to as studio swing or "TV levels") rather than using the full range of [0, 255] (referred to as full swing or "PC levels").
         //https://en.wikipedia.org/wiki/YUV#Numerical_approximations
-        OSType pixelFormatType = aFrame->color_range == AVCOL_RANGE_MPEG ? kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange : kCVPixelFormatType_420YpCbCr8BiPlanarFullRange;
+        OSType pixelFormatType = picture->color_range == MRCOL_RANGE_MPEG ? kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange : kCVPixelFormatType_420YpCbCr8BiPlanarFullRange;
         NSMutableDictionary* attributes = [NSMutableDictionary dictionary];
         [attributes setObject:@(linesize) forKey:(NSString*)kCVPixelBufferBytesPerRowAlignmentKey];
         [attributes setObject:[NSDictionary dictionary] forKey:(NSString*)kCVPixelBufferIOSurfacePropertiesKey];
@@ -56,13 +57,13 @@
     }
     
     if (kCVReturnSuccess == result) {
-        int h = aFrame->height;
+        const int h = picture->height;
         CVPixelBufferLockBaseAddress(pixelBuffer,0);
         
         // Here y_src is Y-Plane of YUV(NV12) data.
-        unsigned char *y_src  = aFrame->data[0];
+        unsigned char *y_src  = picture->data[0];
         unsigned char *y_dest = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0);
-        size_t y_src_bytesPerRow  = aFrame->linesize[0];
+        size_t y_src_bytesPerRow  = picture->linesize[0];
         size_t y_dest_bytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0);
         /*
          将FFmpeg解码后的YUV数据塞到CVPixelBuffer中，这里必须注意不能使用以下三种形式，否则将可能导致画面错乱或者绿屏或程序崩溃！
@@ -85,9 +86,9 @@
         }
         
         // Here uv_src is UV-Plane of YUV(NV12) data.
-        unsigned char *uv_src = aFrame->data[1];
+        unsigned char *uv_src = picture->data[1];
         unsigned char *uv_dest = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1);
-        size_t uv_src_bytesPerRow  = aFrame->linesize[1];
+        size_t uv_src_bytesPerRow  = picture->linesize[1];
         size_t uv_dest_bytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1);
         
         /*
@@ -102,7 +103,7 @@
         //memcpy(uv_dest, uv_src, bytesPerRowUV * BYTE_ALIGN_2(h)/2);
         
         //only swap VU for NV21
-        if (aFrame->format == AV_PIX_FMT_NV21) {
+        if (picture->format == MR_PIX_FMT_NV21) {
             unsigned char *uv = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1);
             /*
              将VU交换成UV；
@@ -148,15 +149,15 @@
     return uiImage;
 }
 
-+ (UIImage *)imageFromAVFrameOverBitmap:(AVFrame*)aFrame
++ (UIImage *)imageFromAVFrameOverBitmap:(MRPicture *)picture
 {
-    NSParameterAssert(aFrame->format == AV_PIX_FMT_RGB24);
+    NSParameterAssert(picture->format == MR_PIX_FMT_RGB24);
     
-    int w = aFrame->width;
-    int h = aFrame->height;
+    int w = picture->width;
+    int h = picture->height;
     
-    const UInt8 *rgb   = aFrame->data[0];
-    size_t bytesPerRow = aFrame->linesize[0];
+    const UInt8 *rgb   = picture->data[0];
+    size_t bytesPerRow = picture->linesize[0];
     CFIndex length     = bytesPerRow * h;
     
     CGBitmapInfo bitmapInfo = kCGBitmapByteOrderDefault;
@@ -189,9 +190,9 @@
     return image;
 }
 
-+ (UIImage *)imageFromAVFrameOverPixelBuffer:(AVFrame*)aFrame
++ (UIImage *)imageFromAVFrameOverPixelBuffer:(MRPicture *)picture
 {
-    CVPixelBufferRef pixelBuffer = [self createCVPixelBufferFromAVFrame:aFrame];
+    CVPixelBufferRef pixelBuffer = [self createCVPixelBufferFromPicture:picture];
     if (pixelBuffer) {
         UIImage *img = [self imageFromCVPixelBuffer:pixelBuffer];
         CFRelease(pixelBuffer);

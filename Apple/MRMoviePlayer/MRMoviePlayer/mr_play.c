@@ -35,7 +35,6 @@
 /* no AV correction is done if too big error */
 #define AV_NOSYNC_THRESHOLD 10.0
 
-
 static void mrlog(const char * f, ...){
     va_list args;       //定义一个va_list类型的变量，用来储存单个参数
     va_start(args,f); //使args指向可变参数的第一个参数
@@ -540,6 +539,25 @@ static MRPixelFormat AVPixelFormat2MR (enum AVPixelFormat avpf){
         {
             assert(0);
             return MR_PIX_FMT_NONE;
+        }
+            break;
+    }
+}
+
+static MRColorRange AVColorRange2MR (enum AVColorRange avcr){
+    switch (avcr) {
+        case AVCOL_RANGE_UNSPECIFIED:
+            return MRCOL_RANGE_UNSPECIFIED;
+        case AVCOL_RANGE_JPEG:
+            return MRCOL_RANGE_JPEG;
+        case AVCOL_RANGE_MPEG:
+            return MRCOL_RANGE_MPEG;
+        case AVCOL_RANGE_NB:
+            return MRCOL_RANGE_NB;
+        default:
+        {
+            assert(0);
+            return MRCOL_RANGE_UNSPECIFIED;
         }
             break;
     }
@@ -1588,7 +1606,16 @@ static void video_display(VideoState *is)
     // retain new pic.
     av_frame_ref(is->dispalying, af->frame);
     if (is->display_func) {
-        is->display_func(is->display_func_ctx,is->dispalying);
+        //important！copy from AVFrame to MRPicture.
+        MRPicture picture = {0};
+        picture.format = AVPixelFormat2MR((enum AVPixelFormat)is->dispalying->format);
+        picture.width = is->dispalying->width;
+        picture.height = is->dispalying->height;
+        picture.color_range = AVColorRange2MR(is->dispalying->color_range);
+        memcpy(picture.data, is->dispalying->data, FFMIN(sizeof(picture.data),sizeof(is->dispalying->data)));
+        memcpy(&picture.linesize, &is->dispalying->linesize, FFMIN(sizeof(picture.linesize),sizeof(is->dispalying->linesize)));
+        
+        is->display_func(is->display_func_ctx,&picture);
     }
 }
 

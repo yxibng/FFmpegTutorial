@@ -12,19 +12,19 @@
 #import <UIKit/UIKit.h>
 #import <CoreVideo/CVPixelBuffer.h>
 #import <CoreMedia/CMSampleBuffer.h>
-#import <libavutil/frame.h>
+#import <MRMoviePlayer/mr_play.h>
 
 @interface MRConvertUtil : NSObject
 
 ///need CFRelease the result
-+ (CVPixelBufferRef)createCVPixelBufferFromAVFrame:(AVFrame*)pFrame;
++ (CVPixelBufferRef)createCVPixelBufferFromPicture:(MRPicture*)picture;
 ///need CFRelease the result
-+ (CVPixelBufferRef)createCVPixelBufferFromAVFrame:(AVFrame*)pFrame opt:(CVPixelBufferPoolRef)poolRef;
++ (CVPixelBufferRef)createCVPixelBufferFromPicture:(MRPicture*)picture opt:(CVPixelBufferPoolRef)poolRef;
 
 + (UIImage *)imageFromCVPixelBuffer:(CVPixelBufferRef)pixelBuffer;
 //only support AV_PIX_FMT_RGB24 format!
-+ (UIImage *)imageFromAVFrameOverBitmap:(AVFrame*)aFrame;
-+ (UIImage *)imageFromAVFrameOverPixelBuffer:(AVFrame*)aFrame;
++ (UIImage *)imageFromAVFrameOverBitmap:(MRPicture*)picture;
++ (UIImage *)imageFromAVFrameOverPixelBuffer:(MRPicture*)picture;
 ///need CFRelease the result
 + (CMSampleBufferRef)createCMSampleBufferFromCVPixelBuffer:(CVPixelBufferRef)pixelBuffer;
 
