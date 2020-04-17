@@ -1595,12 +1595,10 @@ static void video_display(VideoState *is)
 static void video_refresh(VideoState *is,double *remaining_time)
 {
     double time;
-    int force_refresh = 0;
 retry:
     ///没有桢可显示
     if (frame_queue_nb_remaining(&is->pictq) == 0) {
         // nothing to do, no picture to display in the queue
-        force_refresh = 0;
     } else {
         double last_duration, duration, delay;
         Frame *vp, *lastvp;
@@ -1660,12 +1658,10 @@ retry:
 
         // 删除当前读指针元素，读指针+1。若未丢帧，读指针从lastvp更新到vp；若有丢帧，读指针从vp更新到nextvp
         frame_queue_next(&is->pictq);
-        force_refresh = 1;
     }
 display:
-    /* display picture */
-    if (force_refresh)
-        video_display(is);                      // 取出当前帧vp(若有丢帧是nextvp)进行播放
+    // 取出当前帧vp(若有丢帧是nextvp)进行播放
+    video_display(is);
 }
 
 #pragma mark -
